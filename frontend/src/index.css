@@ -1,0 +1,292 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* Dark theme — RGB channels for Tailwind's opacity modifier syntax */
+  --c-bg:    7 8 11;
+  --c-s1:    14 16 20;
+  --c-s2:    20 23 29;
+  --c-s3:    27 31 39;
+  --c-line:  35 40 48;
+  --c-lines: 52 59 71;
+  --c-ink:   243 242 238;
+  --c-ink2:  197 200 207;
+  --c-ink3:  138 144 156;
+  /* Hex shortcuts for CSS properties that can't use rgb() vars directly */
+  --bg-hex:   #07080b;
+  --s1-hex:   #0e1014;
+  --s2-hex:   #14171d;
+  --s3-hex:   #1b1f27;
+  --ink-hex:  #f3f2ee;
+  --ink3-hex: #8a909c;
+  --line-hex: #232830;
+  --lines-hex: #343b47;
+}
+
+html.light {
+  color-scheme: light;
+  --c-bg:    248 249 251;
+  --c-s1:    255 255 255;
+  --c-s2:    240 242 246;
+  --c-s3:    232 235 240;
+  --c-line:  226 228 233;
+  --c-lines: 205 208 216;
+  --c-ink:   13 15 20;
+  --c-ink2:  58 62 74;
+  --c-ink3:  107 114 128;
+  --bg-hex:   #f8f9fb;
+  --s1-hex:   #ffffff;
+  --s2-hex:   #f0f2f6;
+  --s3-hex:   #e8ebf0;
+  --ink-hex:  #0d0f14;
+  --ink3-hex: #6b7280;
+  --line-hex: #e2e4e9;
+  --lines-hex: #cdd0d8;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg-hex);
+  color: var(--ink-hex);
+  font-family: "Inter Variable", Inter, "Segoe UI", system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lines-hex) transparent;
+}
+
+::selection {
+  background: rgba(77, 157, 255, 0.35);
+}
+
+@layer components {
+  .glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)), rgb(var(--c-bg) / 0.88);
+    backdrop-filter: blur(22px) saturate(1.6);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.07) inset,
+      0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
+      0 24px 64px -20px rgba(0, 0, 0, 0.9);
+  }
+  .glass-hover {
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .glass-hover:hover {
+    border-color: rgba(124, 184, 255, 0.32);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.07) inset,
+      0 20px 56px -16px rgba(37, 99, 184, 0.5);
+  }
+  .text-gradient {
+    background: linear-gradient(115deg, #fff 10%, #7cb8ff 50%, #ff9a7a 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-gradient-blue {
+    background: linear-gradient(115deg, #e0eeff 0%, #4d9dff 55%, #7cb8ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--s2-hex);
+    border-radius: 8px;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    animation: shimmer 1.8s infinite;
+  }
+  /* Hairline gradient accent — use on top edge of hero sections */
+  .accent-line-top::before {
+    content: "";
+    position: absolute;
+    inset-x: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(77, 157, 255, 0.6) 40%, rgba(255, 154, 122, 0.4) 70%, transparent);
+    pointer-events: none;
+  }
+}
+
+/* Ambient backdrop: pure dark + faint dot grid. No aurora blobs. */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-hex);
+}
+.ambient-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%);
+}
+/* Scanline overlay — subtle CRT texture for the tactical feel */
+.ambient-scan {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---- Leaflet incident markers ------------------------------------------- */
+.aa-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--c);
+  color: var(--bg-hex);
+  font: 700 11px/1 "JetBrains Mono Variable", "JetBrains Mono", Consolas, monospace;
+  box-shadow: 0 0 0 2px var(--s1-hex), 0 0 18px -2px var(--c);
+  transition: transform 0.2s;
+}
+.aa-marker:hover {
+  transform: scale(1.15);
+}
+.aa-marker.aa-critical::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--c);
+  animation: pulse-ring 2.2s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+  z-index: -1;
+}
+.aa-marker.aa-unverified {
+  outline: 2px dashed rgba(var(--c-ink) / 0.85);
+  outline-offset: 2px;
+}
+.aa-marker.aa-verified {
+  outline: 2px solid #2fd06b;
+  outline-offset: 2px;
+}
+.aa-marker.aa-selected {
+  box-shadow: 0 0 0 2px var(--s1-hex), 0 0 0 6px rgba(77, 157, 255, 0.6), 0 0 26px 2px rgba(77, 157, 255, 0.7);
+}
+.aa-cluster {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--c-s1) / 0.92);
+  border: 3px solid var(--c);
+  box-shadow: 0 0 20px -4px var(--c);
+  color: var(--ink-hex);
+  font: 700 12px/1 "JetBrains Mono Variable", "JetBrains Mono", Consolas, monospace;
+}
+.aa-tt {
+  font-size: 12px;
+  line-height: 1.4;
+}
+.leaflet-tooltip.aa-place-label {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: #6b7280;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 0;
+}
+.leaflet-tooltip.aa-place-label::before {
+  display: none;
+}
+.leaflet-container {
+  background: transparent;
+  font-family: "Inter Variable", Inter, "Segoe UI", system-ui, sans-serif;
+}
+.leaflet-tooltip {
+  background: rgb(var(--c-s2) / 0.95);
+  backdrop-filter: blur(8px);
+  color: var(--ink-hex);
+  border: 1px solid var(--lines-hex);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.7);
+}
+.leaflet-tooltip-top::before {
+  border-top-color: var(--lines-hex);
+}
+.leaflet-bar {
+  border: 0 !important;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.7) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+.leaflet-bar a {
+  background: rgb(var(--c-s2) / 0.9);
+  color: var(--ink-hex);
+  border-bottom-color: var(--lines-hex);
+}
+.leaflet-bar a:hover {
+  background: var(--s3-hex);
+}
+.leaflet-control-attribution {
+  background: rgb(var(--c-s1) / 0.7) !important;
+  color: var(--ink3-hex) !important;
+}
+.leaflet-control-attribution a {
+  color: #7cb8ff !important;
+}
+/* Offline basemap: tactical dark-map grid when no tiles are available. */
+.offline-basemap {
+  background:
+    /* centre glow — where incidents concentrate */
+    radial-gradient(ellipse 70% 50% at 52% 42%, rgba(37, 99, 184, 0.18), transparent 70%),
+    /* bottom horizon */
+    radial-gradient(ellipse at 50% 110%, rgba(37, 99, 184, 0.1), transparent 55%),
+    /* fine coordinate grid */
+    linear-gradient(rgba(124, 184, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 184, 255, 0.045) 1px, transparent 1px),
+    /* coarse sector lines */
+    linear-gradient(rgba(124, 184, 255, 0.085) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 184, 255, 0.085) 1px, transparent 1px),
+    #070a12;
+  background-size: auto, auto, 14px 14px, 14px 14px, 70px 70px, 70px 70px, auto;
+}
+/* Keep OSM tiles dark when a local pack is loaded */
+.leaflet-tile-pane {
+  filter: brightness(0.55) contrast(1.15) saturate(0.5) invert(0.94) hue-rotate(178deg);
+}

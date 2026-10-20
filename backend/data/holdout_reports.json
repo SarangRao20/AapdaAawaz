@@ -1,0 +1,80 @@
+{
+  "_notice": "SYNTHETIC HELD-OUT DATASET. Written AFTER the rule-based lexicon was frozen (2026-10-20) and never used to tune it. None is a real call, person, address or incident. Place names refer to the fictional simulated gazetteer except where a report deliberately names a place outside it.",
+  "dataset_version": "1.0",
+  "label": "SYNTHETIC HOLD-OUT — fictional scenario, not a real emergency",
+  "split": "holdout",
+  "reports": [
+    {
+      "id": "HLD-001", "language_hint": "en", "offset_minutes": 5, "audio_fixture": null,
+      "scenario_tags": ["unseen-synonym", "stranded", "grandmother"],
+      "transcript": "Water has come into our houses in Ranwadi near the market, around 12 of us are stranded on the first floor with my grandmother. Please send a boat.",
+      "ground_truth": {"incident_group": "H01", "disaster_type": "flood", "language": "en", "place_id": "P10", "people_count": 12, "vulnerable": {"elderly": true, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "critical"}
+    },
+    {
+      "id": "HLD-002", "language_hint": "hi", "offset_minutes": 18, "audio_fixture": null,
+      "scenario_tags": ["duplicate-of-HLD-001", "upper-floor"],
+      "transcript": "रानवाडी बाज़ार के पास पानी भर गया है, बारह लोग ऊपर की मंज़िल पर हैं, दादी भी साथ हैं। नाव भेजिए।",
+      "ground_truth": {"incident_group": "H01", "disaster_type": "flood", "language": "hi", "place_id": "P10", "people_count": 12, "vulnerable": {"elderly": true, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "high"}
+    },
+    {
+      "id": "HLD-003", "language_hint": "mr", "offset_minutes": 9, "audio_fixture": null,
+      "scenario_tags": ["earthquake", "possible-entrapment", "children"],
+      "transcript": "भिवगड गावात मोठा भूकंप झाला, शाळेची इमारत पडली. काही मुले आत अडकली असण्याची शक्यता आहे.",
+      "ground_truth": {"incident_group": "H03", "disaster_type": "earthquake", "language": "mr", "place_id": "P09", "people_count": null, "vulnerable": {"elderly": false, "children": true, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "critical"}
+    },
+    {
+      "id": "HLD-004", "language_hint": "mixed", "offset_minutes": 12, "audio_fixture": null,
+      "scenario_tags": ["hinglish", "non-person-number", "sick-child"],
+      "transcript": "Sonarwadi mein ghar ke andar 3 feet paani hai, hum 4 log hain, ek bachcha bimar hai, dawai chahiye.",
+      "ground_truth": {"incident_group": "H04", "disaster_type": "flood", "language": "mixed", "place_id": "P07", "people_count": 4, "vulnerable": {"elderly": false, "children": true, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "high"}
+    },
+    {
+      "id": "HLD-005", "language_hint": "en", "offset_minutes": 21, "audio_fixture": null,
+      "scenario_tags": ["fire", "nobody-inside", "fire-brigade"],
+      "transcript": "Fire at the Kothale gram panchayat building, smoke everywhere, nobody is inside now, please send the fire brigade.",
+      "ground_truth": {"incident_group": "H05", "disaster_type": "fire", "language": "en", "place_id": "P02", "people_count": null, "vulnerable": {"elderly": false, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "medium"}
+    },
+    {
+      "id": "HLD-006", "language_hint": "hi", "offset_minutes": 27, "audio_fixture": null,
+      "scenario_tags": ["swept-away", "river", "spelling-variant"],
+      "transcript": "पिंपळमाळ पुल के पास नदी में एक आदमी बह गया है, लोग किनारे पर खड़े हैं।",
+      "ground_truth": {"incident_group": "H06", "disaster_type": "flood", "language": "hi", "place_id": "P06", "people_count": null, "vulnerable": {"elderly": false, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "critical"}
+    },
+    {
+      "id": "HLD-007", "language_hint": "mr", "offset_minutes": 31, "audio_fixture": null,
+      "scenario_tags": ["hyphen-range", "safe", "basic-needs"],
+      "transcript": "कान्हावती नगरात आमच्या इमारतीच्या तळमजल्यात पाणी आहे. आम्ही पंधरा-वीस जण वरच्या मजल्यावर सुरक्षित आहोत. फक्त पिण्याचे पाणी हवे.",
+      "ground_truth": {"incident_group": "H07", "disaster_type": "flood", "language": "mr", "place_id": "P04", "people_count": 20, "vulnerable": {"elderly": false, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "medium"}
+    },
+    {
+      "id": "HLD-008", "language_hint": "en", "offset_minutes": 36, "audio_fixture": null,
+      "scenario_tags": ["landslide", "chest-pain", "old-lady"],
+      "transcript": "Ambeghat ghat road: our tempo is stuck behind a landslide, 9 passengers, one old lady has chest pain.",
+      "ground_truth": {"incident_group": "H08", "disaster_type": "landslide", "language": "en", "place_id": "P03", "people_count": 9, "vulnerable": {"elderly": true, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": true, "priority": "critical"}
+    },
+    {
+      "id": "HLD-009", "language_hint": "mixed", "offset_minutes": 40, "audio_fixture": null,
+      "scenario_tags": ["noisy", "fragmentary"],
+      "transcript": "Hello? Haan... Dongarwadi... [inaudible] ... pani ... [inaudible]",
+      "ground_truth": {"incident_group": "H09", "disaster_type": "flood", "language": "mixed", "place_id": "P05", "people_count": null, "vulnerable": {"elderly": false, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "high"}
+    },
+    {
+      "id": "HLD-010", "language_hint": "hi", "offset_minutes": 44, "audio_fixture": null,
+      "scenario_tags": ["place-not-in-reference", "more-than-count"],
+      "transcript": "हमारे गांव का नाम सावरगाव है, यहां नदी का पानी घरों में आ गया है, पचास से ज्यादा लोग फंसे हैं।",
+      "ground_truth": {"incident_group": "H10", "disaster_type": "flood", "language": "hi", "place_id": null, "people_count": 50, "vulnerable": {"elderly": false, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "critical"}
+    },
+    {
+      "id": "HLD-011", "language_hint": "en", "offset_minutes": 49, "audio_fixture": null,
+      "scenario_tags": ["structural-risk", "vehicles-not-people"],
+      "transcript": "Karanjkhed bridge has cracks and is shaking, about 30 vehicles are queued on it.",
+      "ground_truth": {"incident_group": "H11", "disaster_type": "other", "language": "en", "place_id": "P08", "people_count": null, "vulnerable": {"elderly": false, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "high"}
+    },
+    {
+      "id": "HLD-012", "language_hint": "mr", "offset_minutes": 55, "audio_fixture": null,
+      "scenario_tags": ["resolved-situation", "past-tense-rescue"],
+      "transcript": "नंदवाडी शाळेच्या छतावरून सगळ्यांना बोटीने बाहेर काढले आहे, आता कोणी अडकलेले नाही.",
+      "ground_truth": {"incident_group": "H12", "disaster_type": "flood", "language": "mr", "place_id": "P01", "people_count": null, "vulnerable": {"elderly": false, "children": false, "infants": false, "pregnant_people": false, "people_with_disabilities": false}, "medical_emergency": false, "priority": "low"}
+    }
+  ]
+}
