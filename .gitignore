@@ -1,0 +1,25 @@
+# secrets
+.env
+backend/.env
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/.pytest_cache/
+backend/.venv/
+backend/var/
+
+# node
+frontend/node_modules/
+frontend/dist/
+frontend/node_modules/.tmp/
+
+# local tooling (portable Node download)
+.tools/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,20 @@
+{
+  "name": "Aapda Awaaz — Disaster Voice",
+  "short_name": "Aapda Awaaz",
+  "description": "Disaster voice triage system for Indian languages",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07080b",
+  "theme_color": "#07080b",
+  "lang": "en",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any maskable" }
+  ],
+  "categories": ["utilities", "productivity"],
+  "shortcuts": [
+    { "name": "New call", "short_name": "Call", "url": "/", "description": "Submit a new voice report" },
+    { "name": "Live situation", "short_name": "Live", "url": "/live", "description": "Situation room" },
+    { "name": "All reports", "short_name": "Reports", "url": "/reports", "description": "All incoming reports" }
+  ]
+}
