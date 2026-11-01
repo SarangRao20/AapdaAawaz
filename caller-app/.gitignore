@@ -1,0 +1,9 @@
+node_modules/
+dist/
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+android/capacitor.settings.gradle
+*.local
+.env
