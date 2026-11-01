@@ -15,6 +15,9 @@ frontend/node_modules/
 frontend/dist/
 frontend/node_modules/.tmp/
 
+# build artifacts — the APK is published as a GitHub Release, not committed
+AapdaAwaaz-caller.apk
+
 # local tooling (portable Node download)
 .tools/
 
