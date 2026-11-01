@@ -2,6 +2,9 @@
 
 Run (from backend/):  .venv\\Scripts\\python -m uvicorn app.main:app --reload --port 8000
 Interactive API docs: http://localhost:8000/docs
+
+Deployment marker (proves content propagation on each push to main):
+ci-deploy-probe-2026-11-01
 """
 from __future__ import annotations
 
