@@ -57,10 +57,12 @@ export function useJourney(reportId: string): JourneyData {
   useEffect(() => {
     if (status !== "processed" || askedAck.current === reportId) return;
     askedAck.current = reportId;
-    if (r?.acknowledgement) {
+    if (r?.acknowledgement?.audio_url) {
+      // Already synthesised — no need to hit the API again
       setAck(r.acknowledgement);
       return;
     }
+    // Pipeline creates text-only ack; always call acknowledge to trigger Timbre synthesis
     void api.acknowledge(reportId).then(setAck).catch(() => setAckFailed(true));
   }, [status, reportId, r?.acknowledgement]);
 
