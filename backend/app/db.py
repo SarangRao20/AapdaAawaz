@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import settings
@@ -49,9 +49,12 @@ def _run_migrations(conn) -> None:
     """Apply ALTER TABLE migrations that SQLite's create_all cannot handle."""
     for sql in _MIGRATIONS:
         try:
-            conn.execute(sql)
-        except Exception:
-            pass  # column already exists — ignore duplicate column error
+            conn.execute(text(sql))
+        except Exception as exc:
+            # SQLite raises "duplicate column name" when the column already exists;
+            # that is the only error we want to swallow here.
+            if "duplicate column name" not in str(exc).lower():
+                raise
 
 
 def init_db() -> None:
