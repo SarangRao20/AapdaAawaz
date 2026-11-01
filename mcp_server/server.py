@@ -31,7 +31,8 @@ mcp = FastMCP(
         "Aapda Awaaz is a disaster voice-triage system for India. "
         "It ingests emergency calls in Hindi, Marathi and English, "
         "transcribes them with Gnani Prisma STT, extracts structured facts "
-        "with Gnani Evon LLM, deduplicates against existing incidents, "
+        "with keyword rules (or Evon if self-hosted and configured), "
+        "deduplicates against existing incidents, "
         "prioritises by urgency, and sends a voice acknowledgement back to "
         "the caller via Gnani Timbre TTS. Use submit_report to start the "
         "pipeline, get_report to poll until processed, and list_incidents / "
@@ -143,18 +144,17 @@ def list_incidents(
     Returns a list of incident summaries, each with id, disaster_type, location,
     people_count, priority_label, urgency, report_count, and created_at.
     """
-    params: dict[str, Any] = {"limit": min(max(1, limit), 100)}
-    if status != "all":
-        params["status"] = status
+    # Filter on the server: filtering after the limit would silently drop matches.
+    params: dict[str, Any] = {"limit": min(max(1, limit), 100), "status": status}
+    if priority:
+        params["priority"] = priority
+    if disaster_type:
+        params["disaster_type"] = disaster_type
     with _client() as c:
         data = _ok(c.get("/api/incidents", params=params))
     items = data.get("items", [])
-    if priority:
-        items = [i for i in items if i.get("priority_label") == priority]
-    if disaster_type:
-        items = [i for i in items if i.get("disaster_type") == disaster_type]
     return {
-        "total": len(items),
+        "total": data.get("total", len(items)),
         "incidents": [
             {
                 "id": i["id"],
@@ -231,11 +231,11 @@ def get_incident(incident_id: str) -> dict:
 def get_system_health() -> dict:
     """Check the live status of the Gnani AI pipeline providers.
 
-    Returns whether Prisma STT, Evon LLM, and Timbre TTS are reachable,
-    plus configuration details (models, endpoints).
+    Returns which speech-to-text, extraction and text-to-speech providers are
+    configured. It reports configuration only and does not contact them.
     """
     with _client() as c:
-        data = _ok(c.get("/api/system/health"))
+        data = _ok(c.get("/api/health"))
     return data
 
 
