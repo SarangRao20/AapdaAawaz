@@ -67,5 +67,5 @@ export async function pollReport(id: string): Promise<ReportStatus> {
 }
 
 export async function triggerAck(id: string): Promise<void> {
-  await fetch(`${BASE}/api/reports/${id}/acknowledge`, { method: "POST" });
+  await fetch(`${BASE}/api/reports/${id}/acknowledgement?synthesize=true`, { method: "POST" });
 }
