@@ -70,7 +70,7 @@ export function Settings() {
           {p ? (
             <>
               <StatusRow label="Gnani Prisma · Speech-to-text" mode={p.speech_to_text.mode} note={p.speech_to_text.note} />
-              <StatusRow label="Gnani Evon · Extraction" mode={p.extraction.mode} note={p.extraction.note} />
+              <StatusRow label={`${p.extraction.mode === "real" ? "Gnani Evon" : "Rule-based"} · Extraction`} mode={p.extraction.mode} note={p.extraction.note} />
               <StatusRow label="Gnani Timbre · Text-to-speech" mode={p.text_to_speech.mode} note={p.text_to_speech.note} />
             </>
           ) : (

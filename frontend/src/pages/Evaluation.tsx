@@ -213,22 +213,15 @@ export function Evaluation() {
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.06] bg-surface-2 px-4 py-3 text-xs">
         <div className="flex items-center gap-2">
-          <span className={cn("h-2 w-2 rounded-full", data.providers.evon_available ? "bg-status-good" : "bg-status-warning")} />
+          <span className="h-2 w-2 rounded-full bg-status-good" />
           <span className="font-medium text-ink">Evaluation extractor:</span>
           <span className="rounded-md bg-surface-3 px-2 py-0.5 font-mono text-2xs text-ink-2">
             rule-based-v1
           </span>
-          {data.providers.evon_available && (
-            <span className="rounded-md bg-status-good/10 px-2 py-0.5 font-mono text-2xs text-status-good">
-              Gnani Evon v3.3 key detected — active on live calls
-            </span>
-          )}
-        </div>
-        {!data.providers.evon_available && (
           <span className="text-ink-3">
-            Set <code className="rounded bg-surface-3 px-1 py-0.5 font-mono text-2xs">GNANI_API_KEY</code> + <code className="rounded bg-surface-3 px-1 py-0.5 font-mono text-2xs">EXTRACTION_PROVIDER=evon</code> to enable Evon on live calls
+            Live calls: {data.providers.evon_available ? "Gnani Evon v3.3" : "rule-based-v1"}
           </span>
-        )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
