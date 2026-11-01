@@ -242,7 +242,7 @@ function Rail({ scene, ready, jobs, onPick }: { scene: number; ready: boolean[];
   );
 }
 
-function Journey({ reportId, onReset }: { reportId: string; onReset: () => void }) {
+function Journey({ reportId, onReset, onFollowUp }: { reportId: string; onReset: () => void; onFollowUp: (id: string) => void }) {
   const d = useJourney(reportId);
   const [scene, setScene] = useState(0);
   const [shown, setShown] = useState(0);
@@ -293,7 +293,7 @@ function Journey({ reportId, onReset }: { reportId: string; onReset: () => void 
       case 3: return <LocateScene key="3" {...props} />;
       case 4: return <MatchScene key="4" {...props} />;
       case 5: return <PriorityScene key="5" {...props} />;
-      case 6: return <ReplyScene key="6" {...props} />;
+      case 6: return <ReplyScene key="6" {...props} onFollowUpAnswered={(newId) => { setScene(0); setFinished(false); onFollowUp(newId); }} />;
       default: return null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,7 +362,7 @@ export function JourneyPage() {
   const navigate = useNavigate();
   const id = params.get("r");
   return id ? (
-    <Journey reportId={id} onReset={() => navigate("/")} />
+    <Journey reportId={id} onReset={() => navigate("/")} onFollowUp={(newId) => setParams({ r: newId })} />
   ) : (
     <Start onStarted={(rid) => setParams({ r: rid })} />
   );
