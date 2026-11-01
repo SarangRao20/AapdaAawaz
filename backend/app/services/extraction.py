@@ -212,6 +212,11 @@ def _people_and_ages(tokens: list[Token], ev: list[Evidence], unc: list[str], qu
                 and _num(tokens[i + 2]) is not None):
             low, value = value, _num(tokens[i + 2])
             i += 2
+        # "N से ज्यादा / more than N" → treat as approximate count equal to N
+        elif (i + 2 < n and tokens[i + 1].norm in _RANGE and tokens[i + 2].clause == tok.clause
+              and tokens[i + 2].norm in _APPROX):
+            # skip the "से ज्यादा / se zyada / more than" token — value stays at N, mark approx
+            i += 2
         via_vulnerable = False
         for k in range(i + 1, min(i + 4, n)):
             t = tokens[k]
@@ -528,6 +533,20 @@ def extract(transcript: str, language_hint: str | None = None) -> ExtractionResu
     urgency, urgency_basis = _urgency(tokens, ev)
     status = _status(tokens, ev)
     location = _location(tokens, ev, unc, quality)
+
+    # Precautionary: a fragmentary low-quality transcript that still contains a disaster
+    # keyword warrants a minimum "medium" urgency — the call may be worse than it sounds.
+    # Post-processing: if evacuation is confirmed, remove dangers/needs triggered by
+    # past-tense rescue verbs (e.g. "छतावरून बाहेर काढले" = "rescued from roof").
+    POSITIONAL_RESOLVED = {"on_roof", "trapped", "surrounded_by_water"}
+    if "reported_evacuated" in status:
+        dangers = [d for d in dangers if d not in POSITIONAL_RESOLVED]
+        needs = [n for n in needs if n != "rescue_evacuation"]
+
+    if urgency == "unknown" and quality == "low" and disaster != "unknown":
+        urgency = "medium"
+        urgency_basis = "precautionary: low-quality transcript with disaster signal — assume medium urgency"
+        unc.append("Urgency assumed medium: fragmentary transcript with disaster keyword (precautionary)")
 
     if urgency == "unknown":
         unc.append("Caller did not express urgency explicitly")

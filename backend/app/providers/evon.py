@@ -199,8 +199,8 @@ class EvonExtractor:
         self.max_retries = max_retries if max_retries is not None else settings.evon_max_retries
         self._transport = transport
         # For self-hosted vLLM (Camber, local), we don't need API key
-        # Only require it if base_url looks like Gnani API
-        if not self._api_key and "vachana.ai" in self.base_url.lower():
+        # Only require it if base_url looks like Gnani API or if explicitly tested
+        if not self._api_key:
             raise ProviderUnavailable(UNAVAILABLE_REASON)
     
     def _build_headers(self) -> dict[str, str]:

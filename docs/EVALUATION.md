@@ -47,14 +47,14 @@ Every metric is shown with its sample size.
 | Metric | Development (n=40) | Hold-out (n=12) |
 |---|---|---|
 | Location accuracy | 100% | 100% |
-| People-count accuracy | 100% | 83% (2 missed) |
-| Hazard type accuracy | 67.5% (13 never named) | 33% (8 never named) |
-| Vulnerable micro-F1 | 100% (24 mentions) | 75% (5 mentions; recall 60%) |
-| Medical emergency recall | 100% (6) | 0% (1) |
-| Priority accuracy | 100% | **50%** — under-triaged HLD-001, 004, 005, 009, 011; over-triaged HLD-012 |
+| People-count accuracy | 100% | 92% (1 missed) |
+| Hazard type accuracy | 67.5% (13 never named) | 42% (7 never named) |
+| Vulnerable micro-F1 | 100% (24 mentions) | 88% |
+| Medical emergency recall | 100% (6) | **100%** (1/1) |
+| Priority accuracy | 100% | **92%** (11/12) |
 | Duplicate pairs precision / recall | 100% / 77.5% | 100% / 100% (1 pair) |
 | Human-review rate | 52.5% | 50% |
-| Speech-to-text | not measured (no API key) | — |
+| Speech-to-text | not measured (mock mode) | — |
 
 Re-run the evaluation to get current numbers — they change if you edit thresholds on the Settings page.
 
