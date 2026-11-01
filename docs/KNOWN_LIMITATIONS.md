@@ -9,8 +9,9 @@
   there is no chunking. Optional preprocessing (`AUDIO_PREPROCESSING=true`) applies a spectral noise
   gate + RMS loudness normalisation before the audio is sent to Prisma; requires
   numpy/scipy/noisereduce/soundfile. On any preprocessing error the original file is used unchanged.
-* **Gnani Timbre (TTS)** — **tested and working with live API** (v2.5, Oct 30, 2026). Voice names
-  (Ishaan, Nalini, Kaveri, Poorvi) come from the public voice catalogue.
+* **Gnani Timbre (TTS)** — **tested and working with live API** (`timbre-v3.0`, voice `Shivani`).
+  Every v3.0 voice speaks all supported languages; v2.5 voice names (Ishaan, Nalini, Kaveri,
+  Poorvi) are rejected by v3.0 with HTTP 400.
 * **Gnani Evon** — Evon v3.3 is available as **open weights on Hugging Face** (Apache 2.0), not as
   an API service. Running Evon locally is out of scope for this contest submission. The codebase
   includes a complete OpenAI-compatible adapter (`app/providers/evon.py`) that could be used with

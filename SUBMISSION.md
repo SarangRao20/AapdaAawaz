@@ -28,10 +28,10 @@ Voice report → Gnani Prisma STT → Structured extraction → Confidence gate
 - Tested live: ✅ Working with contest API key (Oct 30, 2026)
 - Optional preprocessing: spectral noise gate + RMS normalization
 
-### 2. **Timbre v2.5 (Text-to-Speech)**
+### 2. **Timbre v3.0 (Text-to-Speech)**
 - Generates spoken acknowledgements in the caller's language
-- Voices: Nalini (Hindi), Ishaan (Marathi), Kaveri (English), Poorvi (Mixed)
-- Tested live: ✅ Working with contest API key (Oct 30, 2026)
+- Voice: `Shivani` (warm, empathetic; speaks Hindi, Marathi, English and Hinglish)
+- Tested live: ✅ Working with contest API key
 
 ### Architecture: End-to-end Gnani API integration
 - Audio upload → **Prisma** transcription → Rule-based extraction* → **Timbre** acknowledgement

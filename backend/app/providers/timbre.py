@@ -25,7 +25,6 @@ TRANSIENT_STATUS = {429, 500, 502, 503, 504}
 
 
 class TimbreTTS:
-    name = "gnani-timbre-v2.5"
     mode = "real"
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None,
@@ -38,6 +37,11 @@ class TimbreTTS:
         self._transport = transport
         if not self._api_key:
             raise ProviderUnavailable("GNANI_API_KEY is not configured")
+
+    @property
+    def name(self) -> str:
+        """Report the configured model, e.g. gnani-timbre-v3.0."""
+        return f"gnani-{settings.timbre_model}"
 
     def synthesize(self, text: str, language: str) -> SpeechResult:
         lang_code = TIMBRE_LANGUAGE_CODES.get(language)
