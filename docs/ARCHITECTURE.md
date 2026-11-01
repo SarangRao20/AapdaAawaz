@@ -35,7 +35,7 @@ flowchart LR
         PRISMA[Gnani Prisma STT]
         MOCK[Mock fixture-lookup STT]
         TIMBRE[Gnani Timbre TTS]
-        EVON[Gnani Evon — stub, undocumented]
+        EVON[Gnani Evon — optional, self-hosted]
     end
 
     DB[(SQLite<br/>reports · incidents · links<br/>suggestions · jobs · reviews<br/>audit · ground truth)]

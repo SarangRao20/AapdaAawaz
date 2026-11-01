@@ -274,11 +274,11 @@ def stt_benchmark(run_real: bool) -> dict:
 
 def run(cfg: dict, run_stt: bool = False) -> dict:
     from ..config import settings as _settings
-    evon_available = bool(_settings.gnani_api_key)
+    # True only when live calls really use Evon. A Gnani key alone does not enable it.
+    evon_available = _settings.extraction_provider == "evon" and bool(_settings.evon_api_key or _settings.gnani_api_key)
     extraction_label = (
-        "rule-based-v1 (deterministic; used for evaluation reproducibility"
-        + (f"; Gnani Evon v3.3 is available — set EXTRACTION_PROVIDER=evon for live calls)"
-           if evon_available else "; set GNANI_API_KEY + EXTRACTION_PROVIDER=evon to enable LLM extraction)")
+        "rule-based-v1 (deterministic; used for evaluation reproducibility; live calls use "
+        + ("Gnani Evon v3.3)" if evon_available else "the same rule-based extractor)")
     )
     splits = {}
     for name, fixtures in (("development", load_fixtures()["reports"]), ("holdout", load_holdout()["reports"])):

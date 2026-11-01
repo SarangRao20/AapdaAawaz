@@ -52,7 +52,8 @@ def provider_status(stt_mode: str | None = None, tts_mode: str | None = None) ->
             "evon_available": evon_key and settings.extraction_provider == "evon",
             "note": (
                 None if (evon_key and settings.extraction_provider == "evon")
-                else "Set EXTRACTION_PROVIDER=evon (and GNANI_API_KEY or EVON_API_KEY) to use Gnani Evon v3.3 extraction."
+                else "Keyword rules, works offline. Evon v3.3 is optional and needs a self-hosted endpoint "
+                     "(EXTRACTION_PROVIDER=evon, EVON_BASE_URL)."
             ),
         },
         "text_to_speech": {

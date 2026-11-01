@@ -85,11 +85,19 @@ class Settings:
     def gnani_key_configured(self) -> bool:
         return bool(self.gnani_api_key)
 
+# Dashboard dev server, caller-app dev server, and the caller APK's WebView (http://localhost).
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173", "http://127.0.0.1:5173",
+    "http://localhost:5174", "http://127.0.0.1:5174",
+    "http://localhost",
+)
+
+
 def load_settings() -> Settings:
     var_dir = Path(_env("AAPDA_VAR_DIR", str(BACKEND_DIR / "var"))).resolve()
     db_url = _env("DATABASE_URL", f"sqlite:///{(var_dir / 'aapda.db').as_posix()}")
     origins = [o.strip() for o in _env(
-        "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
+        "CORS_ORIGINS", ",".join(DEFAULT_CORS_ORIGINS)).split(",") if o.strip()]
     return Settings(
         var_dir=var_dir,
         database_url=db_url,

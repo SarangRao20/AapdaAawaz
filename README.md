@@ -83,7 +83,7 @@ Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variab
 | `GNANI_BASE_URL` | `https://api.vachana.ai` | Gnani API base URL |
 | `STT_PROVIDER` | `auto` | `auto` (Prisma if key, else mock) · `prisma` · `mock` |
 | `TTS_PROVIDER` | `auto` | `auto` (Timbre if key) · `none` |
-| `EXTRACTION_PROVIDER` | `rules` | `rules` (keyword-based, offline) · `evon` (Gnani Evon v3.3 LLM, requires key) |
+| `EXTRACTION_PROVIDER` | `rules` | `rules` (keyword-based, offline) · `evon` (Evon v3.3 on your own OpenAI-compatible deployment, see `EVON_BASE_URL`) |
 | `PRISMA_DEFAULT_LANGUAGE` | `hi-IN` | Used when no language hint is given |
 | `PRISMA_TIMEOUT_S` / `PRISMA_MAX_RETRIES` | `30` / `2` | Retries only on 429/5xx/network errors |
 | `EVON_BASE_URL` | `https://api.vachana.ai/v1` | Evon LLM endpoint (OpenAI-compatible) |
@@ -92,7 +92,7 @@ Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variab
 | `TIMBRE_MODEL`, `TIMBRE_VOICE_*` | `timbre-v3.0`, Ishaan/Nalini/Kaveri/Poorvi | Voice per language |
 | `AAPDA_VAR_DIR` | `backend/var` | SQLite DB, uploads, generated audio |
 | `DATABASE_URL` | `sqlite:///<var>/aapda.db` | |
-| `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Explicit list, no wildcard |
+| `CORS_ORIGINS` | dashboard (`:5173`), caller app (`:5174`), caller APK (`http://localhost`) | Explicit list, no wildcard |
 | `MAX_UPLOAD_MB` | `10` | Upload size limit |
 
 Runtime thresholds (confidence gate, dedup, priority labels, provider mode) are edited on the
@@ -158,7 +158,7 @@ backend/app/
    api/        FastAPI routes (thin) + serializers
    services/   extraction · gate · priority · matching · aggregation   ← pure, deterministic
                pipeline · worker · review · demo · evaluation · stats  ← DB orchestration
-   providers/  prisma (STT) · timbre (TTS) · evon (stub) · mock_stt · registry
+   providers/  prisma (STT) · timbre (TTS) · evon (optional, self-hosted) · mock_stt · registry
    models.py   SQLAlchemy (reports, incidents, links, suggestions, jobs, reviews, audit, ground truth…)
 backend/data/  simulated gazetteer · 40 synthetic reports · 12 hold-out reports · 4 synthetic WAVs
 ```
