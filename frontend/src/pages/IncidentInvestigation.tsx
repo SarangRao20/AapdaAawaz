@@ -88,7 +88,7 @@ function IncidentIndex() {
         <p className="text-xs text-ink-3">Pick an incident to inspect its evidence, linked reports, confidence and audit history.</p>
       </div>
       {list.error && <ErrorBanner offline message={list.error} />}
-      <Card>{list.loading && !list.data ? <Spinner /> : <IncidentQueue items={items} onSelect={(i) => navigate(`/incidents/${i}`)} emptyText="No incidents yet — load demo data or submit a report." />}</Card>
+      <Card>{list.loading && !list.data ? <Spinner /> : <IncidentQueue items={items} onSelect={(i) => navigate(`/incidents/${i}`)} emptyText="No incidents yet — submit a report to begin." />}</Card>
     </div>
   );
 }
@@ -188,7 +188,7 @@ function IncidentDetailPage({ id }: { id: string }) {
                       : i.location_status === "simulated_reference"
                         ? i.location?.place_id?.startsWith("C")
                           ? "City-centre coordinates — exact incident location within city unknown"
-                          : "Simulated reference village — not a real place"
+                          : "Reference location (unverified)"
                         : "Not grounded — not shown on the map"}
                   </div>
                   {i.location?.stated_text?.length ? <div className="text-2xs text-ink-3">Caller said: {i.location.stated_text.map((t) => `"${t}"`).join(", ")}</div> : null}

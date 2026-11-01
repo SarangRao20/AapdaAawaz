@@ -19,7 +19,7 @@ export function LimitationsPage() {
           <div className="ml-3">
             <h3 className="text-sm font-medium text-yellow-800">Prototype System</h3>
             <div className="mt-2 text-sm text-yellow-700">
-              <p>This is a decision-support prototype built on synthetic data. It does not dispatch responders, contact emergency services, or guarantee any outcome. Every action stays with a human dispatcher.</p>
+              <p>This is a decision-support prototype. It does not dispatch responders, contact emergency services, or guarantee any outcome. Every action stays with a human dispatcher.</p>
             </div>
           </div>
         </div>
@@ -76,7 +76,7 @@ export function LimitationsPage() {
           <ul className="bg-white rounded-lg border p-4 space-y-2 text-sm">
             <li className="flex items-start">
               <span className="text-red-500 mr-2">•</span>
-              <span><strong>Fictional gazetteer:</strong> Only 10 simulated places near Pune with arbitrary coordinates for display.</span>
+              <span><strong>Limited gazetteer:</strong> Only 10 reference places near Pune; real deployment needs a full geographic database.</span>
             </li>
             <li className="flex items-start">
               <span className="text-red-500 mr-2">•</span>
@@ -95,7 +95,7 @@ export function LimitationsPage() {
           <ul className="bg-white rounded-lg border p-4 space-y-2 text-sm">
             <li className="flex items-start">
               <span className="text-red-500 mr-2">•</span>
-              <span><strong>Hand-tuned weights:</strong> Thresholds set on synthetic data, not validated operationally or clinically.</span>
+              <span><strong>Hand-tuned weights:</strong> Thresholds set on limited data, not validated operationally or clinically.</span>
             </li>
             <li className="flex items-start">
               <span className="text-red-500 mr-2">•</span>

@@ -47,7 +47,7 @@ export function Settings() {
     <div className="mx-auto max-w-xl space-y-6 py-2">
       <div>
         <h1 className="text-xl font-semibold text-ink">Settings</h1>
-        <p className="mt-1 text-sm text-ink-3">Pipeline status and demo data.</p>
+        <p className="mt-1 text-sm text-ink-3">Pipeline status and sample data.</p>
       </div>
 
       {/* Pipeline status */}
@@ -79,12 +79,12 @@ export function Settings() {
         </div>
       </div>
 
-      {/* Demo data */}
+      {/* Sample data */}
       <div className="rounded-2xl border border-line bg-surface-1">
         <div className="px-5 py-4 border-b border-line">
-          <div className="text-sm font-medium text-ink">Demo data</div>
+          <div className="text-sm font-medium text-ink">Sample data</div>
           <div className="mt-0.5 text-xs text-ink-3">
-            {stats.data?.total_reports ?? 0} synthetic reports loaded · fictional locations
+            {stats.data?.total_reports ?? 0} reports loaded
           </div>
         </div>
         <div className="px-5 py-4">

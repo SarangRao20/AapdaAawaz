@@ -356,7 +356,7 @@ export function LocateScene({ d, onDone }: SceneProps) {
           <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.2, duration: 0.5 }} className="absolute left-4 top-4 max-w-[16rem] rounded-xl border border-white/10 bg-bg/80 p-3 backdrop-blur">
             <div className="text-2xs uppercase tracking-wider text-ink-3">Location</div>
             <div className="text-sm font-medium">{locationText(inc)}</div>
-            {inc.coordinates_are_simulated && <div className="mt-1 text-2xs text-ink-3">Simulated reference point for the demo.</div>}
+            {inc.coordinates_are_simulated && <div className="mt-1 text-2xs text-ink-3">Reference location (unverified).</div>}
           </motion.div>
         )}
       </div>

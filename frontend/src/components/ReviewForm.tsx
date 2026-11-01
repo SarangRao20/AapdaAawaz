@@ -81,7 +81,7 @@ export function ReviewForm({ incident, gazetteer, onDone }: { incident: Incident
                 })}
               </optgroup>
             )}
-            <optgroup label="All reference places (simulated)">
+            <optgroup label="Reference locations">
               {gazetteer?.places.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} · {p.name_local} ({p.id})

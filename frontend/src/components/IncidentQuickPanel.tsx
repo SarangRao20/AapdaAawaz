@@ -57,7 +57,7 @@ export function IncidentQuickPanel({ incident, onClose }: { incident: Incident |
         <dl>
           <KV k="Location">
             {locationText(i)}
-            {i.coordinates_are_simulated && <div className="text-2xs text-ink-3">Map point = simulated village reference, not the exact spot.</div>}
+            {i.coordinates_are_simulated && <div className="text-2xs text-ink-3">Map point = reference location, not the exact spot.</div>}
             {!i.latitude && (
               <div className="inline-flex items-center gap-1 text-2xs text-[#f6c75a]">
                 <MapPinOff className="h-3 w-3" /> Not on the map until a dispatcher verifies the location.

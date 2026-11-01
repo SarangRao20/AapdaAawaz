@@ -142,7 +142,7 @@ function Start({ onStarted }: { onStarted: (reportId: string) => void }) {
 
       {samples.length > 0 && (
         <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-          <h2 className="mb-3 text-center text-sm font-medium text-ink-3">…or play a sample call</h2>
+          <h2 className="mb-3 text-center text-sm font-medium text-ink-3">…or try a recorded call</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {samples.map((f, k) => {
               const disasterTag = f.scenario_tags.find((t) => ["flood", "landslide", "fire", "earthquake"].includes(t)) ?? "other";

@@ -91,8 +91,8 @@ export function ConfidenceBadge({ value }: { value: "high" | "medium" | "low" | 
 
 export function SyntheticTag() {
   return (
-    <Badge className="border-[#3d2f5c] text-[#c4b5f5]" title="Synthetic demonstration data — not a real emergency">
-      <FlaskConical className="h-3 w-3" aria-hidden /> Synthetic
+    <Badge className="border-[#3d2f5c] text-[#c4b5f5]" title="Test fixture — not a real emergency">
+      <FlaskConical className="h-3 w-3" aria-hidden /> Test
     </Badge>
   );
 }

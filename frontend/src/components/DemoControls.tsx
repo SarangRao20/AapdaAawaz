@@ -32,12 +32,12 @@ export function DemoControls({ onChanged, hasData }: { onChanged: () => void; ha
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-2xs font-semibold uppercase tracking-wider text-ink-3">Demo</span>
+        <span className="text-2xs font-semibold uppercase tracking-wider text-ink-3">Sample data</span>
         <Button
           size="sm"
           variant="danger"
           busy={busy === "reset"}
-          title="Deletes all reports, incidents and review history in this local demo database"
+          title="Deletes all reports, incidents and review history"
           onClick={() => {
             if (hasData && !confirmReset) {
               setConfirmReset(true);
@@ -46,12 +46,12 @@ export function DemoControls({ onChanged, hasData }: { onChanged: () => void; ha
             setConfirmReset(false);
             void run("reset", async () => {
               await api.reset();
-              return "Demo data cleared.";
+              return "Data cleared.";
             });
           }}
           onBlur={() => setConfirmReset(false)}
         >
-          <RotateCcw className="h-3.5 w-3.5" /> {confirmReset ? "Click again to delete all demo data" : "Reset"}
+          <RotateCcw className="h-3.5 w-3.5" /> {confirmReset ? "Click again to reset all data" : "Reset"}
         </Button>
         <Button
           size="sm"
@@ -60,7 +60,7 @@ export function DemoControls({ onChanged, hasData }: { onChanged: () => void; ha
           onClick={() =>
             run("hero", async () => {
               const r = await api.inject("SYN-001", true);
-              return `Injected synthetic call ${r.id} (audio → mock STT). Watch its stages in the live feed.`;
+              return `Call ${r.id} queued — watch its stages in the live feed.`;
             })
           }
         >
@@ -72,11 +72,11 @@ export function DemoControls({ onChanged, hasData }: { onChanged: () => void; ha
           onClick={() =>
             run("seed", async () => {
               const r = await api.seed("remaining");
-              return `Loaded ${r.created} synthetic reports → ${r.stats.unique_incidents} candidate incidents.`;
+              return `Loaded ${r.created} reports → ${r.stats.unique_incidents} candidate incidents.`;
             })
           }
         >
-          <Database className="h-3.5 w-3.5" /> 2 · Load all synthetic reports
+          <Database className="h-3.5 w-3.5" /> 2 · Load sample reports
         </Button>
         <Button
           size="sm"
