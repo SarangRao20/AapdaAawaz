@@ -192,7 +192,7 @@ class EvonExtractor:
         max_retries: int | None = None,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        self._api_key = api_key if api_key is not None else settings.gnani_api_key
+        self._api_key = api_key if api_key is not None else (settings.evon_api_key or settings.gnani_api_key)
         self.base_url = (base_url or settings.evon_base_url).rstrip("/")
         self.model = model or settings.evon_model
         self.timeout_s = timeout_s if timeout_s is not None else settings.evon_timeout_s

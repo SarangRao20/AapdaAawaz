@@ -56,14 +56,16 @@ function Start({ onStarted }: { onStarted: (reportId: string) => void }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-4">
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }} className="text-center">
-        <h1 className="text-4xl font-semibold tracking-tight text-white md:text-6xl">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE }} className="text-center">
+        <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-ink-3">
+          <span className="h-1.5 w-1.5 rounded-full bg-status-good" />
+          Gnani Prisma · Evon · Timbre
+        </div>
+        <h1 className="text-3xl font-semibold tracking-tight text-white md:text-5xl">
           A distress call comes in.
-          <br />
-          <span className="text-ink-3">Watch it become a decision.</span>
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-base text-ink-3">
-          Gnani <span className="text-ink-2">Prisma</span> transcribes it in the caller's language. <span className="text-ink-2">Evon</span> extracts the facts. It lands on the map, gets matched, prioritised — and <span className="text-ink-2">Timbre</span> replies.
+        <p className="mx-auto mt-3 max-w-lg text-base text-ink-3">
+          Drop a recording — Prisma transcribes it, Evon extracts the facts, it pins on the map, gets prioritised, and Timbre replies in the caller's language.
         </p>
       </motion.div>
 
@@ -145,7 +147,7 @@ function Start({ onStarted }: { onStarted: (reportId: string) => void }) {
             {samples.map((f, k) => {
               const disasterTag = f.scenario_tags.find((t) => ["flood", "landslide", "fire", "earthquake"].includes(t)) ?? "other";
               const DISASTER_META: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
-                flood: { icon: Waves, color: "#4d9dff", bg: "rgba(77,157,255,0.12)" },
+                flood: { icon: Waves, color: "#38bdf8", bg: "rgba(56,189,248,0.12)" },
                 landslide: { icon: MountainSnow, color: "#fab219", bg: "rgba(250,178,25,0.12)" },
                 fire: { icon: Flame, color: "#ff6b6b", bg: "rgba(255,107,107,0.12)" },
                 earthquake: { icon: MountainSnow, color: "#b794ff", bg: "rgba(183,148,255,0.12)" },

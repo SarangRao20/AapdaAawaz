@@ -19,8 +19,8 @@ export default {
           2: "rgb(var(--c-ink2) / <alpha-value>)",
           3: "rgb(var(--c-ink3) / <alpha-value>)",
         },
-        accent: { DEFAULT: "#4d9dff", dim: "#2563b8", glow: "#7cb8ff" },
-        status: { good: "#2fd06b", warning: "#fab219", serious: "#ff8a5c", critical: "#ff4d4d" },
+        accent: { DEFAULT: "#f97316", dim: "#c2410c", glow: "#fb923c" },
+        status: { good: "#22c55e", warning: "#f59e0b", serious: "#f97316", critical: "#ef4444" },
       },
       fontFamily: {
         sans: ['"Inter Variable"', "Inter", "Segoe UI", "system-ui", "sans-serif"],
@@ -28,9 +28,9 @@ export default {
       },
       fontSize: { "2xs": ["0.6875rem", "1rem"] },
       boxShadow: {
-        glass: "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 12px 40px -12px rgba(0,0,0,0.6)",
-        glow: "0 0 0 1px rgba(77,157,255,0.35), 0 0 32px -4px rgba(77,157,255,0.35)",
-        crit: "0 0 0 1px rgba(255,77,77,0.4), 0 0 36px -6px rgba(255,77,77,0.45)",
+        glass: "0 1px 3px rgba(0,0,0,0.4)",
+        glow: "0 0 0 1px rgba(249,115,22,0.3), 0 0 20px -4px rgba(249,115,22,0.2)",
+        crit: "0 0 0 1px rgba(239,68,68,0.4), 0 0 20px -6px rgba(239,68,68,0.3)",
       },
       keyframes: {
         "pulse-ring": {

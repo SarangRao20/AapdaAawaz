@@ -34,6 +34,7 @@ def get_tts(mode_override: str | None = None) -> TextToSpeech | None:
 
 def provider_status(stt_mode: str | None = None, tts_mode: str | None = None) -> dict:
     key = settings.gnani_key_configured
+    evon_key = bool(settings.evon_api_key or settings.gnani_api_key)
     stt = get_stt(stt_mode) if (stt_mode or settings.stt_provider) != "prisma" or key else None
     tts = get_tts(tts_mode)
     return {
@@ -46,12 +47,12 @@ def provider_status(stt_mode: str | None = None, tts_mode: str | None = None) ->
             "note": None if key else "No GNANI_API_KEY: mock STT only recognises bundled synthetic fixture audio.",
         },
         "extraction": {
-            "active": "gnani-evon-v3.3" if (key and settings.extraction_provider == "evon") else "rule-based-v1",
-            "mode": "real" if (key and settings.extraction_provider == "evon") else "rule_based",
-            "evon_available": key and settings.extraction_provider == "evon",
+            "active": "gnani-evon-v3.3" if (evon_key and settings.extraction_provider == "evon") else "rule-based-v1",
+            "mode": "real" if (evon_key and settings.extraction_provider == "evon") else "rule_based",
+            "evon_available": evon_key and settings.extraction_provider == "evon",
             "note": (
-                None if (key and settings.extraction_provider == "evon")
-                else "Set EXTRACTION_PROVIDER=evon (and GNANI_API_KEY) to use Gnani Evon v3.3 extraction."
+                None if (evon_key and settings.extraction_provider == "evon")
+                else "Set EXTRACTION_PROVIDER=evon (and GNANI_API_KEY or EVON_API_KEY) to use Gnani Evon v3.3 extraction."
             ),
         },
         "text_to_speech": {

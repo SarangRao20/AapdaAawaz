@@ -116,7 +116,7 @@ export function IncidentMap({
     if (!layer || !m) return;
     layer.clearLayers();
     for (const p of places) {
-      L.circleMarker([p.latitude, p.longitude], { radius: 3, color: "#7cb8ff", weight: 1, fillOpacity: 0.5, interactive: false })
+      L.circleMarker([p.latitude, p.longitude], { radius: 3, color: "#737373", weight: 1, fillOpacity: 0.4, interactive: false })
         .bindTooltip(`${escapeHtml(p.name)} (simulated)`, { permanent: true, direction: "right", className: "aa-place-label", offset: [4, 0] })
         .addTo(layer);
     }

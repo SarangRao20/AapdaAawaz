@@ -67,7 +67,7 @@ export function WaveformPlayer({ src }: WaveformPlayerProps) {
         }
         const h = Math.max(2, max * height);
         const y = (height - h) / 2;
-        ctx.fillStyle = i < progressX ? "#4d9dff" : "#2d3748";
+        ctx.fillStyle = i < progressX ? "#f97316" : "#2a2a2a";
         ctx.fillRect(i, y, 1, h);
       }
     },
