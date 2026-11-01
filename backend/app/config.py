@@ -77,10 +77,6 @@ class Settings:
     evon_max_retries: int       # EVON_MAX_RETRIES
     evon_api_key: str = field(repr=False)  # EVON_API_KEY — separate key for Evon/Groq (falls back to GNANI_API_KEY)
 
-    # Claude extraction
-    claude_api_key: str = field(repr=False)  # CLAUDE_API_KEY
-    claude_model: str                          # CLAUDE_MODEL
-
     # Optional enrichment
     geocoding_enabled: bool     # GEOCODING_ENABLED — Nominatim/OSM geocode for unmapped places
     audio_preprocessing_enabled: bool  # AUDIO_PREPROCESSING — spectral gate + RMS normalise before STT
@@ -88,11 +84,6 @@ class Settings:
     @property
     def gnani_key_configured(self) -> bool:
         return bool(self.gnani_api_key)
-
-    @property
-    def claude_key_configured(self) -> bool:
-        return bool(self.claude_api_key)
-
 
 def load_settings() -> Settings:
     var_dir = Path(_env("AAPDA_VAR_DIR", str(BACKEND_DIR / "var"))).resolve()
@@ -131,8 +122,6 @@ def load_settings() -> Settings:
         evon_timeout_s=_env_float("EVON_TIMEOUT_S", 60.0),
         evon_max_retries=_env_int("EVON_MAX_RETRIES", 3),
         evon_api_key=_env("EVON_API_KEY"),  # if set, used instead of gnani_api_key for Evon/Groq
-        claude_api_key=_env("CLAUDE_API_KEY"),
-        claude_model=_env("CLAUDE_MODEL", "claude-sonnet-4-5"),
         geocoding_enabled=_env_bool("GEOCODING_ENABLED", False),
         audio_preprocessing_enabled=_env_bool("AUDIO_PREPROCESSING", False),
     )

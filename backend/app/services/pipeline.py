@@ -19,7 +19,6 @@ from .. import models
 from ..config import settings
 from ..providers.base import ProviderError, ProviderUnavailable
 from ..providers.evon import EvonExtractor
-from ..providers.claude_extractor import ClaudeExtractor
 from ..providers.registry import get_stt
 from . import aggregation, gate, matching
 from . import priority as prio
@@ -257,20 +256,7 @@ def process_report(db: Session, report_id: str) -> models.Report | None:
         # 2. extraction --------------------------------------------------------
         _set_status(db, report, "extracting")
         ext = None
-        if settings.extraction_provider == "claude":
-            log.info("   extraction     provider=claude-sonnet  mode=real  transcript_chars=%d",
-                     len(report.transcript or ""))
-            try:
-                claude = ClaudeExtractor()
-                with stage(db, report, "extraction", claude.name, claude.mode) as job:
-                    result = claude.extract(report.transcript, report.language_hint)
-                    ext = result.model_dump()
-                    job.detail = {"uncertainties": len(ext["uncertainties"])}
-            except ProviderUnavailable as exc:
-                log.warning("claude unavailable, falling back to rules: %s", exc)
-            except ProviderError as exc:
-                log.warning("claude extraction failed, falling back to rules: %s", exc)
-        elif settings.extraction_provider == "evon":
+        if settings.extraction_provider == "evon":
             log.info("   extraction     provider=gnani-evon  mode=real  transcript_chars=%d",
                      len(report.transcript or ""))
             try:
