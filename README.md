@@ -133,7 +133,8 @@ A push to `main` that passes all three then deploys automatically (a manual
 `workflow_dispatch` on `main` does the same). The deploy job tars `backend/`,
 copies it to the VM and runs `.github/scripts/remote_deploy.sh` there, which:
 
-1. backs up the live code to `~/aapda/.deploy/backups/` (last 5 kept),
+1. backs up the live code and snapshots the SQLite database to
+   `~/aapda/.deploy/backups/` (last 5 of each kept),
 2. rsyncs the new tree, leaving `venv/`, `var/` (database, uploads) and `.env` untouched,
 3. installs dependencies only if `requirements.txt` changed,
 4. restarts the `aapda-api` systemd unit and polls `/api/health`,

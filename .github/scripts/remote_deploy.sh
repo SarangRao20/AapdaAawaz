@@ -58,6 +58,24 @@ tar -czf "$BACKUP" -C "$APP_ROOT" \
   --exclude='*/__pycache__' \
   backend
 
+# 1b. Snapshot the SQLite database with sqlite3's backup API (safe while the
+#     service is running). A rollback restores code, not data, so this is the
+#     copy to fall back to if a migration misbehaves.
+DB_PATH="$APP_DIR/var/aapda.db"
+DB_BACKUP="$BACKUP_DIR/aapda-db-$STAMP.db"
+if [ -f "$DB_PATH" ]; then
+  log "snapshotting database -> $DB_BACKUP"
+  "$APP_DIR/venv/bin/python" - "$DB_PATH" "$DB_BACKUP" <<'PY'
+import sqlite3, sys
+
+src, dst = sys.argv[1], sys.argv[2]
+with sqlite3.connect(src, timeout=30) as source, sqlite3.connect(dst) as target:
+    source.backup(target)
+PY
+else
+  log "no database at $DB_PATH yet - skipping snapshot"
+fi
+
 health_ok() { curl -fsS -m 10 "$HEALTH_URL" 2>/dev/null | grep -q '"status":"ok"'; }
 
 wait_for_health() {
@@ -96,7 +114,8 @@ rollback() {
   else
     log "CRITICAL: API still unhealthy after rollback"
   fi
-  printf '[%s] FAILED %s (rolled back to %s)\n' "$STAMP" "$SHA" "$PREV_SHA" >> "$DEPLOY_DIR/deploy.log"
+  printf '[%s] FAILED %s (rolled back to %s, db snapshot %s)\n' \
+    "$STAMP" "$SHA" "$PREV_SHA" "$DB_BACKUP" >> "$DEPLOY_DIR/deploy.log"
   exit 1
 }
 
@@ -136,12 +155,14 @@ fi
 
 printf '%s\n' "$SHA" > "$DEPLOY_DIR/DEPLOYED_SHA"
 printf '%s\n' "$NEW_REQ_HASH" > "$DEPLOY_DIR/requirements.sha256"
-printf '[%s] OK %s\n' "$STAMP" "$SHA" >> "$DEPLOY_DIR/deploy.log"
+printf '[%s] OK %s (db snapshot %s)\n' "$STAMP" "$SHA" "$DB_BACKUP" >> "$DEPLOY_DIR/deploy.log"
 
 log "deployed $SHA"
+log "database snapshot kept at $DB_BACKUP"
 curl -fsS -m 10 "$HEALTH_URL" || true
 printf '\n'
 
 # 6. Keep the last few backups, drop the rest.
 ls -1t "$BACKUP_DIR"/backend-*.tar.gz 2>/dev/null | tail -n "+$((KEEP_BACKUPS + 1))" | xargs -r rm -f
+ls -1t "$BACKUP_DIR"/aapda-db-*.db 2>/dev/null | tail -n "+$((KEEP_BACKUPS + 1))" | xargs -r rm -f
 rm -rf "$WORK_DIR"
