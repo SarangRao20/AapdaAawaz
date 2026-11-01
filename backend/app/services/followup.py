@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import logging
 
+import httpx
+
+from ..config import settings
 from ..providers.base import ProviderError, ProviderUnavailable
 
 log = logging.getLogger("aapda.followup")
@@ -18,6 +21,9 @@ _CRITICAL_CHECKS = [
     ("disaster_unknown",  "Disaster type unknown"),
     ("people_unknown",    "People count unknown"),
 ]
+
+STATIC_PROVIDER = "followup-templates-v1"
+STATIC_MODE = "template"
 
 # Language name for the Evon prompt
 _LANG_NAMES = {
@@ -67,26 +73,28 @@ def needs_followup(ext: dict) -> bool:
     return bool(missing_fields(ext))
 
 
-def generate_questions(ext: dict, language: str) -> list[str]:
-    """Generate follow-up questions via Evon, falling back to static templates.
+def generate_questions(ext: dict, language: str) -> tuple[list[str], str, str]:
+    """Generate follow-up questions, returning ``(questions, provider, mode)``.
 
-    Returns at most 2 questions (most critical first).
+    Uses Evon only when it is the configured extraction provider, and falls back to static
+    templates on any Evon failure: a follow-up question must never fail the report.
+    Returns at most 2 questions (most critical first); provider/mode say what really produced them.
     """
     missing = missing_fields(ext)
     if not missing:
-        return []
+        return [], STATIC_PROVIDER, STATIC_MODE
 
-    # Try Evon first for natural, contextual questions
-    try:
-        from ..providers.evon import EvonExtractor
-        evon = EvonExtractor()
-        questions = _evon_followup(evon, ext, missing, language)
-        if questions:
-            log.info("followup: evon generated %d question(s) for lang=%s missing=%s",
-                     len(questions), language, missing)
-            return questions[:2]
-    except (ProviderUnavailable, ProviderError) as exc:
-        log.debug("followup: evon unavailable (%s), using static templates", exc)
+    if settings.extraction_provider == "evon":
+        try:
+            from ..providers.evon import EvonExtractor
+            evon = EvonExtractor()
+            questions = _evon_followup(evon, ext, missing, language)
+            if questions:
+                log.info("followup: evon generated %d question(s) for lang=%s missing=%s",
+                         len(questions), language, missing)
+                return questions[:2], evon.name, evon.mode
+        except (ProviderUnavailable, ProviderError, httpx.HTTPError, ValueError) as exc:
+            log.warning("followup: evon failed (%s), using static templates", exc)
 
     # Fallback: pick static templates for the first 2 missing fields
     lang = language if language in ("hi", "mr", "en", "mixed") else "hi"
@@ -95,7 +103,7 @@ def generate_questions(ext: dict, language: str) -> list[str]:
         q = _FALLBACK_QUESTIONS[field].get(lang) or _FALLBACK_QUESTIONS[field]["hi"]
         questions.append(q)
     log.info("followup: using static templates for lang=%s missing=%s", lang, missing)
-    return questions
+    return questions, STATIC_PROVIDER, STATIC_MODE
 
 
 def _evon_followup(evon, ext: dict, missing: list[str], language: str) -> list[str]:
@@ -133,8 +141,6 @@ def _evon_followup(evon, ext: dict, missing: list[str], language: str) -> list[s
         f"Do not include any explanation or extra text."
     )
 
-    import httpx
-    import time
     url = f"{evon.base_url}/chat/completions"
     payload = {
         "model": evon.model,

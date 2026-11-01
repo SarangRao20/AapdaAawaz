@@ -213,14 +213,17 @@ def process_report(db: Session, report_id: str) -> models.Report | None:
                 db.commit()
                 return report
             path = settings.upload_dir / audio.stored_name
+            mime_type = audio.mime_type
             if settings.audio_preprocessing_enabled:
                 from .audio_prep import preprocess_audio
                 with stage(db, report, "audio_prep", "audio-prep-v1", "local") as prep_job:
-                    path = preprocess_audio(path)
+                    prepared = preprocess_audio(path)
+                    if prepared != path:  # preprocessing always writes WAV, whatever the upload was
+                        path, mime_type = prepared, "audio/wav"
                     prep_job.detail = {"output": path.name}
             try:
                 with stage(db, report, "transcription", stt.name, stt.mode) as job:
-                    res = stt.transcribe(path, audio.mime_type, report.language_hint)
+                    res = stt.transcribe(path, mime_type, report.language_hint)
                     job.detail = {"note": res.note, "language_code": res.language_code, "request_id": res.request_id}
                     if not (res.transcript or "").strip():
                         job.status = "no_result"
@@ -355,9 +358,9 @@ def process_report(db: Session, report_id: str) -> models.Report | None:
         # 5. agentic follow-up — detect missing fields, generate targeted questions via Evon
         lang = ext.get("language", "hi") or "hi"
         if needs_followup(ext):
-            with stage(db, report, "follow_up", "gnani-evon-v3.3", "real") as fu_job:
+            with stage(db, report, "follow_up") as fu_job:
                 missing = missing_fields(ext)
-                questions = generate_questions(ext, lang)
+                questions, fu_job.provider, fu_job.provider_mode = generate_questions(ext, lang)
                 report.follow_up_needed = True
                 report.follow_up_missing_fields = missing
                 report.follow_up_questions = questions

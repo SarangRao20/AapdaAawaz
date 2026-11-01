@@ -8,7 +8,7 @@ python-multipart==0.0.32
 python-dotenv==1.2.4
 pytest==8.4.2
 # Optional audio preprocessing (AUDIO_PREPROCESSING=true) — spectral noise gate + RMS normalise
-numpy==1.26.4
-scipy==1.13.0
-noisereduce==3.0.2
-soundfile==0.12.1
+numpy==2.2.6
+scipy==1.15.3
+noisereduce==3.0.3
+soundfile==0.13.1
