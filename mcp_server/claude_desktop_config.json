@@ -1,8 +1,9 @@
 {
+  "_note": "Run setup.sh first — it auto-fills the absolute paths for your machine.",
   "mcpServers": {
     "aapda-awaaz": {
-      "command": "/ABSOLUTE/PATH/TO/mcp_server/venv/bin/python",
-      "args": ["/ABSOLUTE/PATH/TO/mcp_server/server.py"],
+      "command": "<run setup.sh to fill this>",
+      "args": ["<run setup.sh to fill this>"],
       "env": {
         "AAPDA_API_URL": "http://localhost:8000"
       }
