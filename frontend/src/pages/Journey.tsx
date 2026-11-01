@@ -15,7 +15,7 @@ import { usePoll } from "../lib/usePoll";
 const STEPS: { label: string; sub: string; icon: LucideIcon; stage?: string }[] = [
   { label: "Hear", sub: "Voice arrives", icon: Mic },
   { label: "Transcribe", sub: "Gnani Prisma STT", icon: AudioLines, stage: "transcription" },
-  { label: "Understand", sub: "Gnani Evon LLM", icon: Brain, stage: "extraction" },
+  { label: "Understand", sub: "Fact extraction", icon: Brain, stage: "extraction" },
   { label: "Locate", sub: "Pin on the globe", icon: MapPin },
   { label: "Match", sub: "Same incident?", icon: GitMerge, stage: "deduplication" },
   { label: "Prioritise", sub: "How urgent", icon: Gauge, stage: "priority" },
@@ -59,13 +59,13 @@ function Start({ onStarted }: { onStarted: (reportId: string) => void }) {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE }} className="text-center">
         <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-ink-3">
           <span className="h-1.5 w-1.5 rounded-full bg-status-good" />
-          Gnani Prisma · Evon · Timbre
+          Gnani Prisma · Timbre
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-white md:text-5xl">
           A distress call comes in.
         </h1>
         <p className="mx-auto mt-3 max-w-lg text-base text-ink-3">
-          Drop a recording — Prisma transcribes it, Evon extracts the facts, it pins on the map, gets prioritised, and Timbre replies in the caller's language.
+          Drop a recording — Prisma transcribes it, the key facts are extracted, it pins on the map, gets prioritised, and Timbre replies in the caller's language.
         </p>
       </motion.div>
 
