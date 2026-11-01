@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Globe Locator</title>
+<!-- ─── Dependencies (CDN) ──────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+
+<!--
+  ════════════════════════════════════════════════════════════════════════════
+  GLOBE LOCATOR — standalone edition
+  ════════════════════════════════════════════════════════════════════════════
+
+  HOW TO INTEGRATE
+  ─────────────────
+  1. Host these two JSON files somewhere your page can fetch them:
+       • countries-110m.json  (world-atlas package, ~100 KB)
+       • countries-50m.json   (world-atlas package, ~200 KB)
+       • gazetteer.json       (built with build.js below, ~1 MB)
+
+  2. Update the three ASSET_* constants near the top of the <script> block.
+
+  3. Done — drop this file into your project. No build step needed.
+
+  BUILD YOUR OWN GAZETTEER (optional)
+  ─────────────────────────────────────
+  If you want to rebuild the offline city/country/landmark database:
+
+    npm install d3 topojson-client world-atlas all-the-cities countries-list i18n-iso-countries
+    # then run build.js (included at the bottom of this file as a comment)
+
+  CONFIGURATION
+  ──────────────
+  Edit the CONFIG block below to change colours, revolutions, speed, etc.
+
+  API HOOK
+  ─────────
+  To wire up a live geocoder instead of the offline gazetteer, replace the
+  `search()` method with one that returns results from your API. Each result
+  must be an object with: { name, sub, lat, lng, kind }
+    kind: 'city' | 'country' | 'landmark' | 'coords'
+  Everything else (the animation, lock-on, HUD) stays the same.
+  ════════════════════════════════════════════════════════════════════════════
+-->
+
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #05070B; height: 100%; }
+
+  /* ── layout shells ──────────────────────────────── */
+  #gl-wrap {
+    position: relative; width: 100%; height: 100vh; min-height: 560px;
+    overflow: hidden; background: #05070B;
+    color: #E8EDF3; font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  #gl-canvas { position: absolute; inset: 0; width: 100%; height: 100%;
+    display: block; cursor: grab; touch-action: none; }
+
+  /* ── search area ────────────────────────────────── */
+  .gl-top { position: absolute; top: 32px; left: 40px; width: 440px; z-index: 3; }
+  .gl-label {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #A9B6C5; display: block; margin-bottom: 10px;
+  }
+  .gl-field {
+    display: flex; align-items: center; gap: 10px;
+    height: 56px; padding: 0 6px 0 16px;
+    background: rgba(10,15,24,0.8);
+    border: 1px solid rgba(160,180,205,0.26); border-radius: 14px;
+    backdrop-filter: blur(12px); transition: border-color 0.2s;
+  }
+  .gl-field:focus-within { border-color: rgba(200,215,232,0.55); }
+  .gl-input {
+    flex: 1; min-width: 0; height: 100%; padding: 0;
+    background: transparent; border: 0; color: #E8EDF3;
+    font: 400 16px 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  .gl-input::placeholder { color: #8C9BAE; }
+  .gl-input:focus { outline: none; }
+  .gl-btn {
+    height: 44px; padding: 0 18px; border: 0; border-radius: 10px;
+    background: var(--accent); color: #05070B;
+    font: 600 14px 'IBM Plex Sans', system-ui, sans-serif;
+    letter-spacing: 0.02em; cursor: pointer; flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  .gl-btn:hover { opacity: 0.88; }
+
+  /* ── suggestions ────────────────────────────────── */
+  .gl-suggestions {
+    list-style: none; margin: 10px 0 0; padding: 6px;
+    display: flex; flex-direction: column; gap: 2px;
+    background: rgba(10,15,24,0.94);
+    border: 1px solid rgba(160,180,205,0.22); border-radius: 14px;
+    backdrop-filter: blur(12px);
+  }
+  .gl-opt {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; min-height: 52px; padding: 8px 12px; width: 100%;
+    border: 0; border-radius: 10px; background: transparent;
+    color: #E8EDF3; text-align: left; cursor: pointer;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  .gl-opt:hover, .gl-opt.is-active { background: rgba(255,255,255,0.08); }
+  .gl-opt-name { font-size: 15px; font-weight: 500; display: block; }
+  .gl-opt-sub { font-size: 13px; color: #A9B6C5; display: block; }
+  .gl-opt-tag {
+    flex-shrink: 0; font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #8C9BAE;
+  }
+  .gl-no-match {
+    margin: 10px 0 0; padding: 12px 14px; font-size: 14px; line-height: 1.45;
+    color: #E8EDF3; background: rgba(10,15,24,0.85);
+    border: 1px solid rgba(160,180,205,0.22); border-radius: 12px;
+  }
+
+  /* ── try chips ──────────────────────────────────── */
+  .gl-chips {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px; margin-top: 14px;
+  }
+  .gl-chip-label {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #8C9BAE; margin-right: 4px;
+  }
+  .gl-chip {
+    min-height: 44px; padding: 0 16px; border-radius: 999px;
+    border: 1px solid rgba(160,180,205,0.26); background: rgba(10,15,24,0.62);
+    color: #C9D3DE; font: 500 14px 'IBM Plex Sans', system-ui, sans-serif;
+    cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  }
+  .gl-chip:hover { border-color: rgba(200,215,232,0.5); color: #E8EDF3; }
+
+  /* ── zoom controls ──────────────────────────────── */
+  .gl-ctrl {
+    position: absolute; top: 32px; right: 40px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 2;
+  }
+  .gl-icon {
+    width: 44px; height: 44px; display: flex; align-items: center;
+    justify-content: center; padding: 0; border-radius: 12px;
+    border: 1px solid rgba(160,180,205,0.26); background: rgba(10,15,24,0.72);
+    color: #C9D3DE; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  }
+  .gl-icon:hover { border-color: rgba(200,215,232,0.5); color: #E8EDF3; }
+
+  /* ── readout card ───────────────────────────────── */
+  .gl-readout {
+    position: absolute; left: 40px; bottom: 40px; width: 440px;
+    padding: 24px 26px; display: flex; flex-direction: column; gap: 10px;
+    background: rgba(8,12,20,0.8); border: 1px solid rgba(160,180,205,0.18);
+    border-radius: 18px; backdrop-filter: blur(14px); z-index: 2;
+  }
+  .gl-readout.is-locked { animation: glIn .6s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes glIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .gl-tag {
+    margin: 0; display: flex; align-items: center; gap: 10px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #A9B6C5;
+  }
+  .gl-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #8C9BAE; flex-shrink: 0;
+  }
+  .gl-dot.accent { background: var(--accent); }
+  .gl-name {
+    margin: 0; font-family: 'Instrument Serif', Georgia, serif;
+    font-weight: 400; font-size: 64px; line-height: 1; letter-spacing: -0.01em;
+  }
+  .gl-sub { margin: 0; font-size: 15px; line-height: 1.5; color: #A9B6C5; }
+  .gl-coords {
+    display: flex; flex-direction: column; gap: 4px; margin-top: 6px;
+    padding-top: 14px; border-top: 1px solid rgba(160,180,205,0.16);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums;
+  }
+  .gl-dms { font-size: 15px; color: #E8EDF3; }
+  .gl-dec { font-size: 12px; color: #8C9BAE; }
+
+  /* ── HUD ─────────────────────────────────────────── */
+  .gl-hud {
+    position: absolute; right: 40px; bottom: 40px; min-width: 300px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;
+    background: rgba(8,12,20,0.74); border: 1px solid rgba(160,180,205,0.18);
+    border-radius: 14px; backdrop-filter: blur(12px);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace; z-index: 2;
+  }
+  .gl-hud dl {
+    margin: 0; display: grid; grid-template-columns: auto 1fr;
+    column-gap: 24px; row-gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums;
+  }
+  .gl-hud dt { color: #8C9BAE; letter-spacing: 0.12em; }
+  .gl-hud dd { margin: 0; text-align: right; color: #E8EDF3; }
+  .gl-hud-hint {
+    margin: 0; padding-top: 10px; border-top: 1px solid rgba(160,180,205,0.14);
+    font-size: 11px; letter-spacing: 0.1em; color: #8C9BAE;
+  }
+
+  /* ── utilities ───────────────────────────────────── */
+  .gl-blink { animation: glBlink .9s steps(2,start) infinite; }
+  @keyframes glBlink { to { visibility: hidden; } }
+  button:focus-visible { outline: 2px solid #E8EDF3; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .gl-blink, .gl-readout.is-locked { animation: none; }
+  }
+  @media (max-width: 640px) {
+    .gl-top { top: 16px; left: 16px; right: 16px; width: auto; }
+    .gl-readout { left: 16px; right: 16px; bottom: 16px; width: auto; }
+    .gl-ctrl, .gl-hud { display: none; }
+    .gl-name { font-size: 40px !important; }
+  }
+</style>
+</head>
+<body>
+<div id="gl-wrap">
+  <canvas id="gl-canvas" role="img" aria-label="Rotating globe"></canvas>
+
+  <!-- ── Search ───────────────────────────────────────────────────── -->
+  <div class="gl-top">
+    <form id="gl-form" role="search">
+      <label class="gl-label" for="gl-q">Search the globe</label>
+      <div class="gl-field">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="#A9B6C5" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+        </svg>
+        <input id="gl-q" class="gl-input" type="text" autocomplete="off"
+               spellcheck="false" placeholder="City, country, landmark or lat, lng">
+        <button type="submit" class="gl-btn">Locate</button>
+      </div>
+      <ul id="gl-suggestions" class="gl-suggestions" hidden></ul>
+      <p id="gl-no-match" class="gl-no-match" hidden></p>
+    </form>
+    <div class="gl-chips">
+      <span class="gl-chip-label">Try</span>
+      <!-- chips injected by JS based on CONFIG.chips -->
+    </div>
+  </div>
+
+  <!-- ── Zoom / reset controls ────────────────────────────────────── -->
+  <div class="gl-ctrl">
+    <button id="gl-zoomin" class="gl-icon" aria-label="Zoom in">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14"></path>
+      </svg>
+    </button>
+    <button id="gl-zoomout" class="gl-icon" aria-label="Zoom out">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M5 12h14"></path>
+      </svg>
+    </button>
+    <button id="gl-reset" class="gl-icon" aria-label="Reset view">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ── Readout card ─────────────────────────────────────────────── -->
+  <section id="gl-readout" class="gl-readout" aria-live="polite">
+    <!-- filled by updateReadout() -->
+  </section>
+
+  <!-- ── HUD ──────────────────────────────────────────────────────── -->
+  <div class="gl-hud">
+    <dl>
+      <dt>LAT</dt><dd id="hud-lat">–</dd>
+      <dt>LON</dt><dd id="hud-lng">–</dd>
+      <dt>SPIN</dt><dd id="hud-spin">0°/s</dd>
+      <dt>ZOOM</dt><dd id="hud-zoom">×1.0</dd>
+    </dl>
+    <p class="gl-hud-hint">DRAG TO ROTATE · SCROLL TO ZOOM</p>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONFIGURATION — edit these to customise the globe
+// ═══════════════════════════════════════════════════════════════════════════
+const CONFIG = {
+  // ── Assets ──────────────────────────────────────────────────────────────
+  // Point these at your hosted files.
+  // You can get the world-atlas files from:
+  //   https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json
+  //   https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json
+  // Build gazetteer.json with the build.js script included at the bottom
+  // of this file, or download it from the artifact's blob directly.
+  TOPO_LO:  'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+  TOPO_HI:  'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json',
+  GAZETTEER: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json', // replace with your gazetteer.json URL
+  // NOTE: If you don't have a hosted gazetteer.json, the globe will still
+  // work — you just won't get city/country/landmark search. You can still
+  // search by coordinates (lat, lng).
+
+  // ── Look ─────────────────────────────────────────────────────────────────
+  accent:      '#FF8A3D',   // #4FD1C5 | #F5D547 | #FF7A9A
+  borders:     true,        // show country borders
+  background:  '#05070B',
+  ocean:       '#070E19',
+  land:        '#21364D',
+
+  // ── Motion ───────────────────────────────────────────────────────────────
+  revolutions: 2,           // extra full turns before lock-on (0–6)
+  spinSeconds: 4.5,         // total spin duration in seconds (1.5–9)
+  idleSpeed:   6,           // degrees/second when no place is locked
+
+  // ── Starting rotation [lambda, phi, gamma] ─────────────────────────────
+  startRot:    [-60, -18, 0],
+
+  // ── Try chips ────────────────────────────────────────────────────────────
+  chips: ['Pune', 'Reykjavík', 'Ushuaia', 'Honolulu', 'Eiffel Tower'],
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  GLOBE ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+(function () {
+  // apply accent CSS variable
+  document.documentElement.style.setProperty('--accent', CONFIG.accent);
+
+  const canvas  = document.getElementById('gl-canvas');
+  const ctx     = canvas.getContext('2d');
+  const wrap    = document.getElementById('gl-wrap');
+  const input   = document.getElementById('gl-q');
+  const form    = document.getElementById('gl-form');
+  const sugList = document.getElementById('gl-suggestions');
+  const noMatch = document.getElementById('gl-no-match');
+  const readout = document.getElementById('gl-readout');
+  const chipsEl = document.querySelector('.gl-chips');
+
+  // ── state ──────────────────────────────────────────────────────────────
+  let phase     = 'loading'; // loading | error | idle | spinning | locked
+  let target    = null;
+  let rot       = CONFIG.startRot.slice();
+  let k         = 1, kGoal = 1;
+  let anim      = null, animU = 0, speed = 0;
+  let drag      = null, idleHold = 0, last = 0, lockAt = 0;
+  let reduced   = false;
+  let W, H, dpr, R, Rcss, cx, cy, stars = [];
+  let proj, path, grat, lo, hi;
+  let items, cities;
+  let pending   = '';
+  let activeIdx = 0, sugItems = [], open = false;
+
+  // ── easing LUT ─────────────────────────────────────────────────────────
+  const LUT_N = 512;
+  const lut    = new Float32Array(LUT_N + 1);
+  (function buildEase () {
+    let sum = 0;
+    for (let i = 0; i < LUT_N; i++) {
+      const u    = (i + 0.5) / LUT_N;
+      const r    = Math.min(1, u / 0.08);
+      const ramp = r * r * (3 - 2 * r);
+      sum += ramp * Math.pow(1 - u, 2.2);
+      lut[i + 1] = sum;
+    }
+    for (let i = 1; i <= LUT_N; i++) lut[i] /= sum;
+  })();
+  function ease (u) {
+    const x = Math.max(0, Math.min(1, u)) * LUT_N;
+    const i = Math.min(LUT_N - 1, Math.floor(x));
+    return lut[i] + (lut[i + 1] - lut[i]) * (x - i);
+  }
+  function eio (u) { u = Math.max(0, Math.min(1, u)); return u < 0.5 ? 4*u*u*u : 1 - Math.pow(-2*u+2, 3)/2; }
+  function eoc (u) { u = Math.max(0, Math.min(1, u)); return 1 - Math.pow(1 - u, 3); }
+  function norm180 (x) { return (((x + 180) % 360) + 360) % 360 - 180; }
+
+  // ── resize ─────────────────────────────────────────────────────────────
+  function resize () {
+    W    = Math.max(1, wrap.clientWidth);
+    H    = Math.max(1, wrap.clientHeight);
+    dpr  = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    const mobile = W < 640;
+    Rcss = mobile ? Math.min(W * 0.42, H * 0.29) : Math.min(W, H) * 0.36;
+    R    = Rcss * dpr;
+    cx   = canvas.width / 2;
+    cy   = canvas.height * (mobile ? 0.47 : 0.5);
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    stars = [];
+    for (let i = 0; i < 260; i++) stars.push({ x: rnd(), y: rnd(), r: 0.5 + rnd() * 1.1, a: 0.15 + rnd() * 0.55 });
+  }
+
+  new ResizeObserver(resize).observe(wrap);
+  resize();
+
+  // ── data loading ────────────────────────────────────────────────────────
+  proj = d3.geoOrthographic().clipAngle(90).precision(0.6);
+  path = d3.geoPath(proj);
+  grat = d3.geoGraticule10();
+
+  function prepTopo (t) {
+    return { land: topojson.feature(t, t.objects.land), borders: topojson.mesh(t, t.objects.countries, (a, b) => a !== b) };
+  }
+
+  fetch(CONFIG.TOPO_LO).then(r => r.json()).then(t => {
+    lo = prepTopo(t);
+    if (phase === 'loading') { phase = 'idle'; updateReadout(); }
+  }).catch(() => { if (!lo) { phase = 'error'; updateReadout(); } });
+
+  fetch(CONFIG.TOPO_HI).then(r => r.json()).then(t => { hi = prepTopo(t); }).catch(() => {});
+
+  fetch(CONFIG.GAZETTEER).then(r => r.json()).then(g => {
+    // only build the index if this looks like a real gazetteer
+    // (world-atlas files don't have a 'cc' field)
+    if (g && g.cc && g.cities) {
+      buildIndex(g);
+      if (pending) { const it = search(pending)[0]; pending = ''; if (it) choose(it); }
+    }
+  }).catch(() => {});
+
+  try { reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+
+  // ── gazetteer index ─────────────────────────────────────────────────────
+  function normStr (s) {
+    return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+  function buildIndex (g) {
+    const N = (s) => normStr(s);
+    const ccKeys = g.cc.map(N);
+    items = [];
+    g.countries.forEach(c => items.push({ kind: 'country', name: c[0], sub: 'Country', lat: c[1], lng: c[2], r: c[3], key: N(c[0]), alts: (c[4] || []).map(N), subKey: '', rank: 2e10 }));
+    g.landmarks.forEach(l => items.push({ kind: 'landmark', name: l[0], sub: l[1], lat: l[2], lng: l[3], key: N(l[0]), alts: [], subKey: N(l[1]), rank: 1e10 }));
+    const n = g.cities.length, D = Math.PI / 180;
+    cities = { n, lat: new Float32Array(n), lng: new Float32Array(n), pop: new Float32Array(n), vx: new Float32Array(n), vy: new Float32Array(n), vz: new Float32Array(n) };
+    g.cities.forEach((c, i) => {
+      items.push({ kind: 'city', name: c[0], sub: g.cc[c[1]], lat: c[2], lng: c[3], pop: c[4], capital: !!c[5], key: N(c[0]), alts: [], subKey: ccKeys[c[1]], rank: c[4] + (c[5] ? 5e6 : 0) });
+      const la = c[2] * D, lo = c[3] * D;
+      cities.lat[i] = c[2]; cities.lng[i] = c[3]; cities.pop[i] = c[4];
+      cities.vx[i] = Math.cos(la) * Math.cos(lo);
+      cities.vy[i] = Math.cos(la) * Math.sin(lo);
+      cities.vz[i] = Math.sin(la);
+    });
+  }
+
+  function scoreKey (k, n) {
+    if (k === n) return 4;
+    if (k.startsWith(n)) return 3;
+    if (k.indexOf(' ' + n) >= 0 || k.indexOf('-' + n) >= 0) return 2;
+    if (n.length >= 3 && k.indexOf(n) >= 0) return 1;
+    return 0;
+  }
+  function parseCoords (q) {
+    const m = String(q).trim().match(/^(-?\d{1,2}(?:\.\d+)?)\s*°?\s*([NSns])?\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)\s*°?\s*([EWew])?$/);
+    if (!m) return null;
+    let lat = parseFloat(m[1]), lng = parseFloat(m[3]);
+    if (m[2] && /s/i.test(m[2])) lat = -Math.abs(lat);
+    if (m[4] && /w/i.test(m[4])) lng = -Math.abs(lng);
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return { kind: 'coords', name: fmtDec(lat, lng), sub: 'Exact coordinates', lat, lng };
+  }
+  function search (q) {
+    const out = [];
+    const co = parseCoords(q);
+    if (co) out.push(co);
+    if (!items) return out;
+    let n = normStr(q);
+    if (!n) return out;
+    let want = '';
+    const ci = n.indexOf(',');
+    if (ci > 0 && !co) { want = n.slice(ci + 1).trim(); n = n.slice(0, ci).trim(); }
+    if (!n) return out;
+    const hits = [];
+    for (const it of items) {
+      let s = scoreKey(it.key, n);
+      for (const a of it.alts) { const sa = scoreKey(a, n); if (sa > s) s = sa; }
+      if (!s) continue;
+      if (want && !(it.subKey && it.subKey.indexOf(want) >= 0)) continue;
+      hits.push([s, it]);
+    }
+    hits.sort((a, b) => (b[0] - a[0]) || (b[1].rank - a[1].rank));
+    for (let i = 0; i < hits.length && out.length < 6; i++) out.push(hits[i][1]);
+    return out;
+  }
+
+  // ── motion ───────────────────────────────────────────────────────────────
+  function zoomFor (it) {
+    if (it.kind === 'country') {
+      const r = Math.max(0.5, it.r || 10);
+      return Math.max(1.15, Math.min(5.5, 1 / Math.sin(r * Math.PI / 180)));
+    }
+    if (it.kind === 'landmark') return 6;
+    return 5;
+  }
+  function zoomAt (a, u) {
+    if (!a.spin) return a.k0 + (a.kT - a.k0) * eio(u);
+    const kMid = Math.min(a.k0, 1) * 0.9;
+    if (u < 0.3) return a.k0 + (kMid - a.k0) * eoc(u / 0.3);
+    if (u < 0.5) return kMid;
+    return kMid + (a.kT - kMid) * eio((u - 0.5) / 0.5);
+  }
+  function flyTo (it) {
+    const revs = reduced ? 0 : Math.max(0, Math.round(CONFIG.revolutions));
+    const base = CONFIG.spinSeconds * 1000;
+    const lam0 = norm180(rot[0]);
+    rot[0] = lam0;
+    let d = (((-it.lng - lam0) % 360) + 360) % 360;
+    if (revs === 0 && d > 180) d -= 360;
+    d += 360 * revs;
+    const dur = reduced ? 900 : (revs === 0 ? Math.max(1200, base * 0.6) : base);
+    drag = null;
+    anim = { t0: performance.now(), dur, spin: revs > 0, lam0, dLam: d, phi0: rot[1], phiT: -it.lat, k0: k, kT: zoomFor(it), onDone: (t) => { lockAt = t; phase = 'locked'; updateReadout(); } };
+    target = it;
+    phase  = 'spinning';
+    updateReadout();
+  }
+  function choose (it) {
+    input.value = it.name;
+    hideSuggestions();
+    noMatch.hidden = true;
+    flyTo(it);
+  }
+  function resetView () {
+    anim = { t0: performance.now(), dur: 1400, spin: false, lam0: rot[0], dLam: 0, phi0: rot[1], phiT: -18, k0: k, kT: 1, onDone: () => { idleHold = 0; } };
+    target = null;
+    phase  = lo ? 'idle' : 'loading';
+    input.value = '';
+    hideSuggestions();
+    noMatch.hidden = true;
+    updateReadout();
+  }
+
+  // ── suggestions UI ───────────────────────────────────────────────────────
+  function fmtSub (it, short) {
+    if (it.kind === 'city') return [it.sub, (!short && it.capital) ? 'Capital' : '', 'Pop. ' + fmtPop(it.pop)].filter(Boolean).join(' · ');
+    if (it.kind === 'country') return 'Country';
+    if (it.kind === 'coords') return 'Exact coordinates';
+    return it.sub;
+  }
+  function tagFor (it) {
+    if (it.kind === 'city') return it.capital ? 'Capital' : 'City';
+    if (it.kind === 'country') return 'Country';
+    if (it.kind === 'coords') return 'Coords';
+    return 'Landmark';
+  }
+  function hideSuggestions () { open = false; sugList.hidden = true; sugList.innerHTML = ''; sugItems = []; activeIdx = 0; }
+  function showSuggestions (arr) {
+    sugItems = arr; activeIdx = 0; open = true;
+    sugList.innerHTML = '';
+    arr.forEach((it, i) => {
+      const li = document.createElement('li');
+      li.style.display = 'flex';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'gl-opt' + (i === 0 ? ' is-active' : '');
+      btn.innerHTML = `<span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="gl-opt-name">${esc(it.name)}</span><span class="gl-opt-sub">${esc(fmtSub(it, true))}</span></span><span class="gl-opt-tag">${esc(tagFor(it))}</span>`;
+      btn.addEventListener('mousedown', e => { e.preventDefault(); choose(it); });
+      li.appendChild(btn); sugList.appendChild(li);
+    });
+    sugList.hidden = false;
+  }
+  function setActive (i) {
+    activeIdx = i;
+    sugList.querySelectorAll('.gl-opt').forEach((el, j) => el.classList.toggle('is-active', j === i));
+  }
+  function esc (s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── readout card ─────────────────────────────────────────────────────────
+  function updateReadout () {
+    const accent = CONFIG.accent;
+    let html = '';
+    if (phase === 'loading') {
+      html = `<p class="gl-tag"><span class="gl-dot gl-blink"></span>Loading atlas</p>
+              <h1 class="gl-name">One moment</h1>`;
+    } else if (phase === 'error') {
+      html = `<p class="gl-tag">Offline</p>
+              <h1 class="gl-name" style="font-size:48px">The atlas didn't load</h1>
+              <p class="gl-sub">Reload the page to try again.</p>`;
+    } else if (phase === 'idle') {
+      html = `<p class="gl-tag"><span class="gl-dot"></span>Standing by</p>
+              <h1 class="gl-name">Where to?</h1>
+              <p class="gl-sub">Search any city, country or landmark. The globe spins up, slows down, and locks onto the exact spot.</p>`;
+    } else if (phase === 'spinning' && target) {
+      html = `<p class="gl-tag" style="color:${accent}"><span class="gl-dot accent gl-blink"></span>Acquiring target</p>
+              <h1 class="gl-name" style="color:rgba(232,237,243,0.55)">${esc(target.name)}</h1>
+              <p class="gl-sub">${esc(fmtSub(target, false))}</p>`;
+    } else if (phase === 'locked' && target) {
+      html = `<p class="gl-tag" style="color:${accent}"><span class="gl-dot accent"></span>Locked on</p>
+              <h1 class="gl-name">${esc(target.name)}</h1>
+              <p class="gl-sub">${esc(fmtSub(target, false))}</p>
+              <div class="gl-coords">
+                <span class="gl-dms">${dms(target.lat,'N','S')}&nbsp;&nbsp;&nbsp;${dms(target.lng,'E','W')}</span>
+                <span class="gl-dec">${fmtDec(target.lat, target.lng)}</span>
+              </div>`;
+    }
+    readout.className = 'gl-readout' + (phase === 'locked' ? ' is-locked' : '');
+    readout.innerHTML = html;
+    canvas.setAttribute('aria-label', (target && phase === 'locked') ? 'Globe centered on ' + target.name : 'Rotating globe');
+  }
+  updateReadout();
+
+  // ── chips ─────────────────────────────────────────────────────────────────
+  CONFIG.chips.forEach(n => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'gl-chip'; btn.textContent = n;
+    btn.addEventListener('click', () => {
+      if (!items) { pending = n; return; }
+      const it = search(n)[0]; if (it) choose(it); else { pending = n; }
+    });
+    chipsEl.appendChild(btn);
+  });
+
+  // ── event listeners ───────────────────────────────────────────────────────
+  input.addEventListener('input', () => {
+    const q = input.value;
+    noMatch.hidden = true;
+    const res = search(q);
+    if (q && res.length) showSuggestions(res); else hideSuggestions();
+  });
+  input.addEventListener('keydown', e => {
+    if (!open || !sugItems.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((activeIdx + 1) % sugItems.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((activeIdx - 1 + sugItems.length) % sugItems.length); }
+    else if (e.key === 'Escape') hideSuggestions();
+  });
+  input.addEventListener('focus', () => { if (sugItems.length) { open = true; sugList.hidden = false; } });
+  input.addEventListener('blur', () => { setTimeout(() => { if (!form.contains(document.activeElement)) hideSuggestions(); }, 0); });
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (!q) return;
+    if (!items) { pending = q; return; }
+    const it = (open && sugItems[activeIdx]) || search(q)[0];
+    if (it) choose(it); else { noMatch.hidden = false; noMatch.textContent = `No match for "${q}". Try a city, country, landmark, or coordinates like 18.52, 73.86.`; hideSuggestions(); }
+  });
+
+  document.getElementById('gl-zoomin').addEventListener('click', () => { if (anim && anim.spin) return; kGoal = Math.max(0.7, Math.min(8, kGoal * 1.6)); });
+  document.getElementById('gl-zoomout').addEventListener('click', () => { if (anim && anim.spin) return; kGoal = Math.max(0.7, Math.min(8, kGoal / 1.6)); });
+  document.getElementById('gl-reset').addEventListener('click', resetView);
+
+  canvas.addEventListener('pointerdown', e => {
+    if (anim && anim.spin) return;
+    if (anim) { anim = null; kGoal = k; }
+    drag = { x: e.clientX, y: e.clientY, l: rot[0], p: rot[1] };
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    canvas.style.cursor = 'grabbing';
+  });
+  canvas.addEventListener('pointermove', e => {
+    const d = drag; if (!d || !Rcss) return;
+    const s = (180 / Math.PI) / (Rcss * k);
+    rot[0] = d.l + (e.clientX - d.x) * s;
+    rot[1] = Math.max(-90, Math.min(90, d.p - (e.clientY - d.y) * s));
+  });
+  canvas.addEventListener('pointerup', () => { if (!drag) return; drag = null; idleHold = performance.now() + 2500; canvas.style.cursor = 'grab'; });
+  canvas.addEventListener('pointercancel', () => { drag = null; canvas.style.cursor = 'grab'; });
+  canvas.addEventListener('wheel', e => { if (anim && anim.spin) return; kGoal = Math.max(0.7, Math.min(8, kGoal * Math.exp(-e.deltaY * 0.0015))); }, { passive: true });
+
+  // ── render helpers ───────────────────────────────────────────────────────
+  function drawStars () {
+    const off = rot[0] * 0.12 * dpr;
+    ctx.fillStyle = '#C8D4E6';
+    for (const s of stars) {
+      let x = (s.x * canvas.width + off) % canvas.width; if (x < 0) x += canvas.width;
+      ctx.globalAlpha = s.a;
+      ctx.fillRect(x, s.y * canvas.height, s.r * dpr, s.r * dpr);
+    }
+    ctx.globalAlpha = 1;
+  }
+  function reticle (x, y, sz, ang, alpha) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    ctx.globalAlpha = alpha; ctx.lineWidth = 1.6 * dpr; ctx.lineCap = 'square';
+    const l = sz * 0.42;
+    ctx.beginPath();
+    [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(q => {
+      ctx.moveTo(q[0]*sz, q[1]*(sz-l)); ctx.lineTo(q[0]*sz, q[1]*sz); ctx.lineTo(q[0]*(sz-l), q[1]*sz);
+    });
+    ctx.stroke(); ctx.restore();
+  }
+  function crosshair (x, y, alpha, gap) {
+    ctx.save(); ctx.globalAlpha = alpha; ctx.lineWidth = dpr;
+    ctx.setLineDash([2*dpr, 6*dpr]);
+    ctx.beginPath();
+    ctx.moveTo(0,y); ctx.lineTo(x-gap,y); ctx.moveTo(x+gap,y); ctx.lineTo(canvas.width,y);
+    ctx.moveTo(x,0); ctx.lineTo(x,y-gap); ctx.moveTo(x,y+gap); ctx.lineTo(x,canvas.height);
+    ctx.stroke(); ctx.restore();
+  }
+  function pin (x, y, a) {
+    ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, a));
+    ctx.beginPath(); ctx.arc(x, y, 5*dpr, 0, Math.PI*2);
+    ctx.fillStyle = CONFIG.accent; ctx.fill();
+    ctx.lineWidth = 2*dpr; ctx.strokeStyle = CONFIG.background; ctx.stroke();
+    ctx.restore();
+  }
+  function labelDot (x, y, T) {
+    const txt = String(T.name).toUpperCase();
+    ctx.save();
+    ctx.font = '500 ' + (11*dpr) + 'px "IBM Plex Mono", ui-monospace, monospace';
+    try { ctx.letterSpacing = (1.2*dpr) + 'px'; } catch(_) {}
+    const tx = x+34*dpr, ty = y-30*dpr, w = ctx.measureText(txt).width;
+    ctx.strokeStyle = CONFIG.accent; ctx.globalAlpha = 0.8; ctx.lineWidth = dpr;
+    ctx.beginPath(); ctx.moveTo(x+18*dpr, y-18*dpr); ctx.lineTo(tx-8*dpr, ty-4*dpr); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(5,7,11,0.82)';
+    ctx.fillRect(tx-8*dpr, ty-15*dpr, w+16*dpr, 22*dpr);
+    ctx.fillStyle = '#E8EDF3'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(txt, tx, ty);
+    ctx.restore();
+  }
+  function drawCities (pr, Rv) {
+    if (!cities || k < 1.8) return;
+    const alpha = Math.min(1, (k - 1.8) / 1.4) * 0.7;
+    const minPop = k < 3 ? 300000 : (k < 4.5 ? 60000 : 0);
+    const D = Math.PI/180, lam = -rot[0]*D, phi = -rot[1]*D;
+    const ux = Math.cos(phi)*Math.cos(lam), uy = Math.cos(phi)*Math.sin(lam), uz = Math.sin(phi);
+    const ratio = Math.hypot(canvas.width, canvas.height) / 2 / Rv;
+    const lim = ratio >= 1 ? 0.03 : Math.cos(Math.asin(ratio));
+    const rr = 1.6 * dpr;
+    ctx.beginPath();
+    for (let i = 0; i < cities.n; i++) {
+      if (cities.pop[i] < minPop) break;
+      if (cities.vx[i]*ux + cities.vy[i]*uy + cities.vz[i]*uz < lim) continue;
+      const p = pr([cities.lng[i], cities.lat[i]]); if (!p) continue;
+      ctx.moveTo(p[0]+rr, p[1]); ctx.arc(p[0], p[1], rr, 0, Math.PI*2);
+    }
+    ctx.fillStyle = 'rgba(214,226,240,' + alpha.toFixed(3) + ')'; ctx.fill();
+  }
+
+  function drawTarget (pr, now) {
+    if (!target) return;
+    const vis = d3.geoDistance([target.lng, target.lat], [-rot[0], -rot[1]]) < Math.PI/2 - 0.03;
+    const p = vis ? pr([target.lng, target.lat]) : null;
+    ctx.save(); ctx.strokeStyle = CONFIG.accent; ctx.fillStyle = CONFIG.accent;
+    if (phase === 'spinning' && anim) {
+      const e = ease(animU);
+      crosshair(cx, cy, 0.1 + 0.14*e, (40 + 40*(1-e))*dpr);
+      reticle(cx, cy, (18 + 96*(1-e))*dpr, (1-e)*Math.PI*0.75, 0.35 + 0.65*e);
+      if (p && animU > 0.7) pin(p[0], p[1], (animU - 0.7) / 0.3);
+    } else if (phase === 'locked' && p) {
+      const t = now - lockAt;
+      crosshair(p[0], p[1], 0.24, 40*dpr);
+      ctx.lineWidth = 1.5*dpr;
+      if (reduced) {
+        ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(p[0], p[1], 30*dpr, 0, Math.PI*2); ctx.stroke();
+      } else {
+        for (let j = 0; j < 2; j++) {
+          const f = ((t/1800) + j*0.5) % 1;
+          ctx.globalAlpha = (1-f)*0.55;
+          ctx.beginPath(); ctx.arc(p[0], p[1], (6+42*f)*dpr, 0, Math.PI*2); ctx.stroke();
+        }
+        if (t < 700) {
+          const f = t/700;
+          ctx.globalAlpha = (1-f)*0.9; ctx.lineWidth = 2*dpr;
+          ctx.beginPath(); ctx.arc(p[0], p[1], (18+110*eoc(f))*dpr, 0, Math.PI*2); ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+      reticle(p[0], p[1], (18 + (reduced ? 0 : Math.sin(t/420)*1.5))*dpr, 0, 1);
+      pin(p[0], p[1], 1);
+      labelDot(p[0], p[1], target);
+    }
+    ctx.restore();
+  }
+
+  function draw (now) {
+    const cW = canvas.width, cH = canvas.height, TAU = Math.PI*2;
+    const Rv = R * k;
+    const trail = (!reduced && speed > 120) ? Math.max(0.4, 1 - (speed-120)/900) : 1;
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0,0,cW,cH); ctx.arc(cx,cy,Rv,0,TAU); ctx.clip('evenodd');
+    ctx.fillStyle = CONFIG.background; ctx.fillRect(0,0,cW,cH);
+    drawStars();
+    const glow = ctx.createRadialGradient(cx,cy,Rv*0.98, cx,cy,Rv*1.28);
+    glow.addColorStop(0,'rgba(84,150,255,0.30)'); glow.addColorStop(0.3,'rgba(84,150,255,0.10)'); glow.addColorStop(1,'rgba(84,150,255,0)');
+    ctx.fillStyle = glow; ctx.fillRect(0,0,cW,cH);
+    ctx.restore();
+
+    if (!lo) return;
+    const pr = proj.translate([cx,cy]).scale(Rv).rotate(rot);
+    const pg = path.context(ctx);
+    const geo = (hi && speed < 90) ? hi : lo;
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx,cy,Rv,0,TAU); ctx.clip();
+    const oc = ctx.createRadialGradient(cx-Rv*0.35,cy-Rv*0.4,Rv*0.05, cx,cy,Rv);
+    oc.addColorStop(0,'#13283F'); oc.addColorStop(1,CONFIG.ocean);
+    ctx.globalAlpha = trail; ctx.fillStyle = oc; ctx.fillRect(0,0,cW,cH); ctx.globalAlpha = 1;
+    ctx.lineJoin = 'round';
+    ctx.beginPath(); pg(grat); ctx.strokeStyle = 'rgba(140,172,205,0.10)'; ctx.lineWidth = dpr; ctx.stroke();
+    ctx.beginPath(); pg(geo.land); ctx.fillStyle = CONFIG.land; ctx.fill();
+    ctx.strokeStyle = 'rgba(132,166,200,0.85)'; ctx.lineWidth = 0.9*dpr; ctx.stroke();
+    if (CONFIG.borders) {
+      ctx.beginPath(); pg(geo.borders);
+      ctx.strokeStyle = 'rgba(150,180,210,0.30)'; ctx.lineWidth = 0.7*dpr; ctx.stroke();
+    }
+    drawCities(pr, Rv);
+    const sh = ctx.createRadialGradient(cx,cy,Rv*0.55, cx,cy,Rv);
+    sh.addColorStop(0,'rgba(3,6,12,0)'); sh.addColorStop(1,'rgba(3,6,12,0.55)');
+    ctx.fillStyle = sh; ctx.fillRect(0,0,cW,cH);
+    const hx=cx-Rv*0.4, hy=cy-Rv*0.45;
+    const hl = ctx.createRadialGradient(hx,hy,0, hx,hy,Rv*0.9);
+    hl.addColorStop(0,'rgba(150,190,255,0.10)'); hl.addColorStop(1,'rgba(150,190,255,0)');
+    ctx.fillStyle = hl; ctx.fillRect(0,0,cW,cH);
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(cx,cy,Rv,0,TAU);
+    ctx.strokeStyle = 'rgba(150,195,255,0.35)'; ctx.lineWidth = dpr; ctx.stroke();
+    drawTarget(pr, now);
+  }
+
+  // ── frame loop ────────────────────────────────────────────────────────────
+  let hudAt = 0;
+  function tick (now) {
+    requestAnimationFrame(tick);
+    const dt = last ? Math.min(0.05, (now - last) / 1000) : 0.016;
+    last = now;
+    const l0 = rot[0];
+    const a = anim;
+    if (a) {
+      const u = Math.min(1, (now - a.t0) / a.dur);
+      animU = u;
+      rot[0] = a.lam0 + a.dLam * ease(u);
+      rot[1] = a.phi0 + (a.phiT - a.phi0) * eio(u);
+      k = zoomAt(a, u);
+      if (u >= 1) { anim = null; kGoal = k; if (a.onDone) a.onDone(now); }
+    } else {
+      if (phase === 'idle' && !drag && now > idleHold) rot[0] += CONFIG.idleSpeed * dt;
+      if (Math.abs(kGoal - k) > 1e-4) k += (kGoal - k) * Math.min(1, dt * 9);
+    }
+    const inst = dt > 0 ? Math.abs(rot[0] - l0) / dt : 0;
+    speed += (inst - speed) * 0.3;
+    draw(now);
+    if (now - hudAt > 100) {
+      hudAt = now;
+      const lat = -rot[1], lng = norm180(-rot[0]);
+      document.getElementById('hud-lat').textContent  = Math.abs(lat).toFixed(4) + '° ' + (lat >= 0 ? 'N' : 'S');
+      document.getElementById('hud-lng').textContent  = Math.abs(lng).toFixed(4) + '° ' + (lng >= 0 ? 'E' : 'W');
+      document.getElementById('hud-spin').textContent = Math.round(speed) + '°/s';
+      document.getElementById('hud-zoom').textContent = '×' + k.toFixed(1);
+    }
+  }
+  requestAnimationFrame(tick);
+
+  // ── formatting helpers ────────────────────────────────────────────────────
+  function fmtDec (lat, lng) {
+    return Math.abs(lat).toFixed(4) + '° ' + (lat >= 0 ? 'N' : 'S') + ', ' + Math.abs(lng).toFixed(4) + '° ' + (lng >= 0 ? 'E' : 'W');
+  }
+  function dms (v, pos, neg) {
+    const a = Math.abs(v);
+    let d = Math.floor(a), mf = (a-d)*60, m = Math.floor(mf), s = Math.round((mf-m)*60);
+    if (s===60){s=0;m+=1;} if(m===60){m=0;d+=1;}
+    return d+'°'+String(m).padStart(2,'0')+'′'+String(s).padStart(2,'0')+'″ '+(v>=0?pos:neg);
+  }
+  function fmtPop (p) {
+    if (p >= 1e6) return (p/1e6).toFixed(p>=1e7?1:2)+'M';
+    if (p >= 1e3) return Math.round(p/1e3)+'K';
+    return String(p);
+  }
+})();
+</script>
+
+<!--
+  ════════════════════════════════════════════════════════════════════════════
+  BUILD SCRIPT — save as build.js, then:
+    npm install d3 topojson-client world-atlas all-the-cities countries-list i18n-iso-countries
+    node build.js
+  Outputs: out/gazetteer.json, out/countries-110m.json, out/countries-50m.json
+
+  const fs = require('fs');
+  const path = require('path');
+  const d3 = require('d3');
+  const topojson = require('topojson-client');
+  const iso = require('i18n-iso-countries');
+  const { countries: CL } = require('countries-list');
+  const OUT = path.join(__dirname, 'out');
+  fs.mkdirSync(OUT, { recursive: true });
+  const r4 = (x) => Math.round(x * 1e4) / 1e4;
+  const w50 = require('world-atlas/countries-50m.json');
+  const feats = topojson.feature(w50, w50.objects.countries).features;
+  const countryRows = [];
+  const nameByIso2 = {};
+  for (const f of feats) {
+    const iso2 = f.id ? iso.numericToAlpha2(f.id) : null;
+    const display = (iso2 && CL[iso2] && CL[iso2].name) || f.properties.name;
+    if (iso2) nameByIso2[iso2] = display;
+    const polys = f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates];
+    let best = null, bestA = -1;
+    for (const p of polys) { const g={type:'Polygon',coordinates:p}, a=d3.geoArea(g); if(a>bestA){bestA=a;best=g;} }
+    const c = d3.geoCentroid(best);
+    let rad = 0;
+    for (const pt of best.coordinates[0]) rad = Math.max(rad, d3.geoDistance(c, pt));
+    const aliases = [];
+    if (f.properties.name !== display) aliases.push(f.properties.name);
+    countryRows.push([display, r4(c[1]), r4(c[0]), Math.round(rad*180/Math.PI*10)/10, aliases]);
+  }
+  const extraAliases = { 'United States':['USA','US','America','United States of America'], 'United Kingdom':['UK','Britain','Great Britain'], 'United Arab Emirates':['UAE'], 'South Korea':['Korea'], 'Netherlands':['Holland'], 'Czech Republic':['Czechia'] };
+  for (const row of countryRows) if (extraAliases[row[0]]) row[4].push(...extraAliases[row[0]]);
+  for (const k of Object.keys(CL)) if (!nameByIso2[k]) nameByIso2[k] = CL[k].name;
+  const all = require('all-the-cities');
+  const cities = all.filter(c => c.population >= 15000 || c.featureCode === 'PPLC').sort((a,b) => b.population - a.population);
+  const ccList = [], ccIdx = {};
+  const cityRows = cities.map(c => {
+    if (!(c.country in ccIdx)) { ccIdx[c.country] = ccList.length; ccList.push(nameByIso2[c.country] || c.country); }
+    const [lng, lat] = c.loc.coordinates;
+    return [c.name, ccIdx[c.country], r4(lat), r4(lng), c.population, c.featureCode === 'PPLC' ? 1 : 0];
+  });
+  const landmarks = [['Eiffel Tower','Paris, France',48.8584,2.2945],['Taj Mahal','Agra, India',27.1751,78.0421],['Mount Everest','Nepal / China',27.9881,86.925],['Statue of Liberty','New York, United States',40.6892,-74.0445],['Golden Gate Bridge','San Francisco, United States',37.8199,-122.4783],['Great Pyramid of Giza','Giza, Egypt',29.9792,31.1342],['Machu Picchu','Cusco Region, Peru',-13.1631,-72.545],['Sydney Opera House','Sydney, Australia',-33.8568,151.2153],['Christ the Redeemer','Rio de Janeiro, Brazil',-22.9519,-43.2105],['Burj Khalifa','Dubai, United Arab Emirates',25.1972,55.2744],['Mount Fuji','Honshu, Japan',35.3606,138.7274],['Colosseum','Rome, Italy',41.8902,12.4922],['Stonehenge','Wiltshire, United Kingdom',51.1789,-1.8262],['Grand Canyon','Arizona, United States',36.1069,-112.1129],['North Pole','Arctic Ocean',90,0],['South Pole','Antarctica',-90,0]];
+  const gaz = { v:1, cc:ccList, cities:cityRows, countries:countryRows, landmarks };
+  fs.writeFileSync(path.join(OUT,'gazetteer.json'), JSON.stringify(gaz));
+  fs.copyFileSync(path.join(__dirname,'node_modules/world-atlas/countries-110m.json'), path.join(OUT,'countries-110m.json'));
+  fs.copyFileSync(path.join(__dirname,'node_modules/world-atlas/countries-50m.json'), path.join(OUT,'countries-50m.json'));
+  ════════════════════════════════════════════════════════════════════════════
+-->
+</body>
+</html>

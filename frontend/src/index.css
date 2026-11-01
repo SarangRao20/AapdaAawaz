@@ -8,24 +8,31 @@
 :root {
   color-scheme: dark;
   /* Dark theme — RGB channels for Tailwind's opacity modifier syntax */
-  --c-bg:    7 8 11;
-  --c-s1:    14 16 20;
-  --c-s2:    20 23 29;
-  --c-s3:    27 31 39;
-  --c-line:  35 40 48;
-  --c-lines: 52 59 71;
-  --c-ink:   243 242 238;
-  --c-ink2:  197 200 207;
-  --c-ink3:  138 144 156;
-  /* Hex shortcuts for CSS properties that can't use rgb() vars directly */
-  --bg-hex:   #07080b;
-  --s1-hex:   #0e1014;
-  --s2-hex:   #14171d;
-  --s3-hex:   #1b1f27;
-  --ink-hex:  #f3f2ee;
-  --ink3-hex: #8a909c;
-  --line-hex: #232830;
-  --lines-hex: #343b47;
+  --c-bg:    10 10 10;
+  --c-s1:    16 16 17;
+  --c-s2:    22 22 23;
+  --c-s3:    30 30 31;
+  --c-line:  38 38 40;
+  --c-lines: 58 58 61;
+  --c-ink:   250 250 249;
+  --c-ink2:  163 163 163;
+  --c-ink3:  115 115 115;
+  /* Hex shortcuts */
+  --bg-hex:    #0a0a0a;
+  --s1-hex:    #101011;
+  --s2-hex:    #161617;
+  --s3-hex:    #1e1e1f;
+  --ink-hex:   #fafaf9;
+  --ink3-hex:  #737373;
+  --line-hex:  #262628;
+  --lines-hex: #3a3a3d;
+  /* Accent — emergency orange */
+  --accent:    #f97316;
+  --accent-glow: #fb923c;
+  /* Status */
+  --status-critical: #ef4444;
+  --status-warning:  #f59e0b;
+  --status-good:     #22c55e;
 }
 
 html.light {
@@ -69,39 +76,27 @@ body {
 }
 
 ::selection {
-  background: rgba(77, 157, 255, 0.35);
+  background: rgba(249, 115, 22, 0.3);
 }
 
 @layer components {
   .glass {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)), rgb(var(--c-bg) / 0.88);
-    backdrop-filter: blur(22px) saturate(1.6);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow:
-      0 1px 0 0 rgba(255, 255, 255, 0.07) inset,
-      0 -1px 0 0 rgba(0, 0, 0, 0.35) inset,
-      0 24px 64px -20px rgba(0, 0, 0, 0.9);
+    background: rgb(var(--c-s1) / 0.96);
+    border: 1px solid rgb(var(--c-line) / 1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
   .glass-hover {
     transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
   .glass-hover:hover {
-    border-color: rgba(124, 184, 255, 0.32);
-    box-shadow:
-      0 1px 0 0 rgba(255, 255, 255, 0.07) inset,
-      0 20px 56px -16px rgba(37, 99, 184, 0.5);
+    border-color: rgba(249, 115, 22, 0.25);
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.1);
   }
   .text-gradient {
-    background: linear-gradient(115deg, #fff 10%, #7cb8ff 50%, #ff9a7a 90%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--ink-hex);
   }
   .text-gradient-blue {
-    background: linear-gradient(115deg, #e0eeff 0%, #4d9dff 55%, #7cb8ff 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--accent-glow);
   }
   .skeleton {
     position: relative;
@@ -117,47 +112,27 @@ body {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
     animation: shimmer 1.8s infinite;
   }
-  /* Hairline gradient accent — use on top edge of hero sections */
   .accent-line-top::before {
     content: "";
     position: absolute;
     inset-x: 0;
     top: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(77, 157, 255, 0.6) 40%, rgba(255, 154, 122, 0.4) 70%, transparent);
+    background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.5) 50%, transparent);
     pointer-events: none;
   }
 }
 
-/* Ambient backdrop: pure dark + faint dot grid. No aurora blobs. */
+/* Ambient backdrop */
 .ambient {
   position: fixed;
   inset: 0;
   z-index: -1;
-  overflow: hidden;
   pointer-events: none;
   background: var(--bg-hex);
 }
-.ambient-grid {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 70%);
-}
-/* Scanline overlay — subtle CRT texture for the tactical feel */
-.ambient-scan {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 3px,
-    rgba(0, 0, 0, 0.04) 3px,
-    rgba(0, 0, 0, 0.04) 4px
-  );
-  pointer-events: none;
-}
+.ambient-grid { display: none; }
+.ambient-scan { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -203,7 +178,7 @@ body {
   outline-offset: 2px;
 }
 .aa-marker.aa-selected {
-  box-shadow: 0 0 0 2px var(--s1-hex), 0 0 0 6px rgba(77, 157, 255, 0.6), 0 0 26px 2px rgba(77, 157, 255, 0.7);
+  box-shadow: 0 0 0 2px var(--s1-hex), 0 0 0 4px rgba(249, 115, 22, 0.5), 0 0 20px rgba(249, 115, 22, 0.3);
 }
 .aa-cluster {
   width: 34px;
@@ -270,21 +245,15 @@ body {
 .leaflet-control-attribution a {
   color: #7cb8ff !important;
 }
-/* Offline basemap: tactical dark-map grid when no tiles are available. */
+/* Offline basemap */
 .offline-basemap {
   background:
-    /* centre glow — where incidents concentrate */
-    radial-gradient(ellipse 70% 50% at 52% 42%, rgba(37, 99, 184, 0.18), transparent 70%),
-    /* bottom horizon */
-    radial-gradient(ellipse at 50% 110%, rgba(37, 99, 184, 0.1), transparent 55%),
-    /* fine coordinate grid */
-    linear-gradient(rgba(124, 184, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 184, 255, 0.045) 1px, transparent 1px),
-    /* coarse sector lines */
-    linear-gradient(rgba(124, 184, 255, 0.085) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 184, 255, 0.085) 1px, transparent 1px),
-    #070a12;
-  background-size: auto, auto, 14px 14px, 14px 14px, 70px 70px, 70px 70px, auto;
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px),
+    #0a0a0a;
+  background-size: 60px 60px, 60px 60px, 12px 12px, 12px 12px, auto;
 }
 /* Keep OSM tiles dark when a local pack is loaded */
 .leaflet-tile-pane {

@@ -22,7 +22,7 @@ export function CardHeader({ title, subtitle, right, className }: { title: React
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
 const variants: Record<Variant, string> = {
-  primary: "bg-gradient-to-b from-[#5aa8ff] to-[#2f7fe0] text-white border-white/10 shadow-[0_6px_20px_-6px_rgba(77,157,255,0.7)] hover:brightness-110",
+  primary: "bg-[#f97316] hover:bg-[#ea6c0d] text-white border-transparent shadow-[0_4px_14px_-4px_rgba(249,115,22,0.5)]",
   secondary: "bg-white/5 text-ink border-white/10 hover:bg-white/10",
   ghost: "bg-transparent text-ink-2 border-transparent hover:bg-white/5 hover:text-ink",
   danger: "bg-[#3a1717] text-[#f3b0b0] border-[#5a2323] hover:bg-[#4a1d1d]",

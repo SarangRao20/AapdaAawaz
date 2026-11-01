@@ -212,7 +212,7 @@ export function TranscribeScene({ d, onDone }: SceneProps) {
 }
 
 /* 3 ─ Understand ───────────────────────────────────────────────────────── */
-const FIELD_COLOR: Record<string, string> = { place: "#4d9dff", people: "#fab219", danger: "#ff6b6b", need: "#2fd06b", vulnerable: "#b794ff", other: "#8a909c" };
+const FIELD_COLOR: Record<string, string> = { place: "#38bdf8", people: "#f59e0b", danger: "#ef4444", need: "#22c55e", vulnerable: "#a78bfa", other: "#737373" };
 function fieldKind(f: string): keyof typeof FIELD_COLOR {
   const s = f.toLowerCase();
   if (s.includes("loc") || s.includes("place") || s.includes("landmark")) return "place";
@@ -341,7 +341,7 @@ export function LocateScene({ d, onDone }: SceneProps) {
   return (
     <SceneFrame title="Pinpointing it" blurb={mappable ? "The location is matched to a known place and flown to on the globe." : "The place is unclear, so the system will not guess a position."}>
       <div className="relative h-[420px] overflow-hidden rounded-2xl border border-white/[0.06] bg-black/30">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_55%,rgba(37,99,184,0.22),transparent_62%)]" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 bg-black/20" aria-hidden />
         <Globe className="h-full w-full" incidents={list} selectedId={mappable ? inc!.id : null} onSelect={() => undefined} />
         {!mappable && inc && (
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="absolute right-4 top-4 flex w-72 items-start gap-3 rounded-2xl border border-status-warning/30 bg-bg/85 p-3.5 backdrop-blur">

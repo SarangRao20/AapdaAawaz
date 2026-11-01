@@ -8,7 +8,7 @@ import { Globe } from "../components/Globe";
 import { IncidentMap } from "../components/IncidentMap";
 import { IncidentQueue } from "../components/IncidentQueue";
 import { IncidentQuickPanel } from "../components/IncidentQuickPanel";
-import { Card, CardHeader, CountUpStat, ErrorBanner, Spinner } from "../components/ui";
+import { Card, CardHeader, ErrorBanner, Spinner } from "../components/ui";
 import { useIncidentAlerts } from "../lib/alerts";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
@@ -59,7 +59,7 @@ export function CommandCenter() {
   const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const { fresh } = useIncidentAlerts(incidents.data?.items);
-  const { t } = useI18n();
+  useI18n();
 
   useEffect(() => {
     const f = params.get("focus");
@@ -94,37 +94,37 @@ export function CommandCenter() {
 
   return (
     <Stagger className="space-y-5">
-      <Reveal className="accent-line-top relative overflow-hidden rounded-2xl glass px-6 py-5">
-        {/* Background gradient */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-accent/[0.06] via-transparent to-status-critical/[0.04]" aria-hidden />
-        <div className="relative flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="mb-2 flex items-center gap-2.5">
-              <span className="relative flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-status-good" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-status-good shadow-[0_0_8px_2px_rgba(47,208,107,0.7)]" />
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-ink-3">Situation Room · Live</span>
-            </div>
-            <h1 className="text-gradient text-4xl font-bold tracking-tight md:text-5xl">Aapda Awaaz</h1>
-            <p className="mt-2 max-w-xl text-sm text-ink-2">
-              {critical > 0
-                ? `${critical} ${t.critical} incident${critical === 1 ? "" : "s"} active — start with the red pins.`
-                : all.length
-                  ? `${t.allClear} — no critical incidents right now.`
-                  : "Waiting for reports. Use “Demo” to load sample calls."}
-            </p>
+      <Reveal className="flex flex-wrap items-center justify-between gap-4 px-1 pb-2">
+        <div>
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-status-good" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-status-good" />
+            </span>
+            <span className="text-xs font-medium text-ink-3">Live · Situation Room</span>
           </div>
-          <DemoControls onChanged={refreshAll} hasData={(s?.total_reports ?? 0) > 0} />
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
+            {critical > 0 ? `${critical} critical — start with the red pins` : all.length ? "All clear — no critical incidents" : "Waiting for reports"}
+          </h1>
         </div>
+        <DemoControls onChanged={refreshAll} hasData={(s?.total_reports ?? 0) > 0} />
       </Reveal>
 
       {stats.error && <ErrorBanner offline message={offline ? stats.error : `Showing last known data — ${stats.error}`} />}
 
-      <Reveal className="grid grid-cols-3 gap-3">
-        <CountUpStat label="Critical" value={critical} tone="critical" />
-        <CountUpStat label="Needs review" value={s?.incidents_needing_review ?? 0} tone="warning" />
-        <CountUpStat label="Reports in" value={s?.total_reports ?? 0} />
+      <Reveal className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
+          <div className="text-xs text-ink-3">Critical</div>
+          <div className="mt-0.5 text-2xl font-semibold" style={{ color: critical > 0 ? "var(--status-critical, #ff4f4f)" : undefined }}>{critical}</div>
+        </div>
+        <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
+          <div className="text-xs text-ink-3">Need review</div>
+          <div className="mt-0.5 text-2xl font-semibold text-ink">{s?.incidents_needing_review ?? 0}</div>
+        </div>
+        <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
+          <div className="text-xs text-ink-3">Reports in</div>
+          <div className="mt-0.5 text-2xl font-semibold text-ink">{s?.total_reports ?? 0}</div>
+        </div>
       </Reveal>
 
       <Reveal className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
@@ -179,10 +179,6 @@ export function CommandCenter() {
             </div>
           )}
           <div className="relative h-[560px] md:h-[640px]">
-            {/* Inner ambient glow */}
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_55%,rgba(37,99,184,0.22),transparent_58%)]" aria-hidden />
-            {/* Corner vignette to frame the map */}
-            <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(ellipse_120%_100%_at_50%_50%,transparent_60%,rgba(7,8,11,0.55)_100%)]" aria-hidden />
             {view === "globe" ? (
               <Globe className="h-full w-full" incidents={filtered} selectedId={selected} onSelect={setSelected} onOpenMap={() => setView("map")} />
             ) : view === "map" ? (

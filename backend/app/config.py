@@ -75,6 +75,7 @@ class Settings:
     evon_model: str             # EVON_MODEL
     evon_timeout_s: float       # EVON_TIMEOUT_S
     evon_max_retries: int       # EVON_MAX_RETRIES
+    evon_api_key: str = field(repr=False)  # EVON_API_KEY — separate key for Evon/Groq (falls back to GNANI_API_KEY)
 
     # Claude extraction
     claude_api_key: str = field(repr=False)  # CLAUDE_API_KEY
@@ -129,6 +130,7 @@ def load_settings() -> Settings:
         evon_model=_env("EVON_MODEL", "evon-v3.3"),
         evon_timeout_s=_env_float("EVON_TIMEOUT_S", 60.0),
         evon_max_retries=_env_int("EVON_MAX_RETRIES", 3),
+        evon_api_key=_env("EVON_API_KEY"),  # if set, used instead of gnani_api_key for Evon/Groq
         claude_api_key=_env("CLAUDE_API_KEY"),
         claude_model=_env("CLAUDE_MODEL", "claude-sonnet-4-5"),
         geocoding_enabled=_env_bool("GEOCODING_ENABLED", False),

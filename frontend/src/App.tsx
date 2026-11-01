@@ -2,10 +2,7 @@ import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import {
   ChevronsLeft,
   ChevronsRight,
-  ClipboardCheck,
   CornerDownLeft,
-  FlaskConical,
-  Inbox,
   Keyboard,
   LayoutDashboard,
   Mic,
@@ -98,13 +95,9 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
 }
 
 const NAV = [
-  { to: "/", label: "New call", hint: "Drop a voice note and watch it unfold", icon: Mic, end: true, group: "main" },
-  { to: "/live", label: "Live situation", hint: "Globe, alerts and what needs attention", icon: LayoutDashboard, group: "main" },
-  { to: "/review", label: "To review", hint: "Check, correct and merge", icon: ClipboardCheck, group: "main" },
-  { to: "/reports", label: "All reports", hint: "Every report, with search", icon: Inbox, group: "more" },
-  { to: "/incidents", label: "Incident details", hint: "Everything about one incident", icon: Search, group: "more" },
-  { to: "/evaluation", label: "Accuracy", hint: "How well the system performs", icon: FlaskConical, group: "more" },
-  { to: "/settings", label: "Settings", hint: "Thresholds and providers", icon: SettingsIcon, group: "more" },
+  { to: "/", label: "New Call", hint: "Record a voice report and process it", icon: Mic, end: true },
+  { to: "/live", label: "Situation Room", hint: "Live map, alerts and active incidents", icon: LayoutDashboard },
+  { to: "/settings", label: "Settings", hint: "API providers and thresholds", icon: SettingsIcon },
 ];
 
 function useOnline() {
@@ -173,8 +166,8 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
       const id = t.toUpperCase().replace(/\s/g, "-");
       pages.unshift(
         m[1].toLowerCase() === "inc"
-          ? { key: id, title: `Open incident ${id}`, sub: "Jump straight to investigation", icon: Search, go: `/incidents/${id}` }
-          : { key: id, title: `Find report ${id}`, sub: "Search incoming reports", icon: Inbox, go: `/reports?q=${id}` },
+          ? { key: id, title: `Open incident ${id}`, sub: "Jump to incident investigation", icon: Search, go: `/incidents/${id}` }
+          : { key: id, title: `Find report ${id}`, sub: "Search reports", icon: Search, go: `/reports?q=${id}` },
       );
     }
     return pages;
@@ -293,87 +286,61 @@ function LangToggle({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function Sidebar({ collapsed, setCollapsed, openPalette, openShortcuts, dark, toggleTheme }: { collapsed: boolean; setCollapsed: (v: boolean) => void; openPalette: () => void; openShortcuts: () => void; dark: boolean; toggleTheme: () => void }) {
+function GnaniLogo({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+      <path d="M7 12c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="12" cy="14" r="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+function Sidebar({ collapsed, setCollapsed, openShortcuts, dark, toggleTheme }: { collapsed: boolean; setCollapsed: (v: boolean) => void; openShortcuts: () => void; dark: boolean; toggleTheme: () => void }) {
   const stats = usePoll(api.stats, 5000);
-  const badges: Record<string, number> = {
-    "/review": (stats.data?.incidents_needing_review ?? 0) + (stats.data?.possible_duplicates_pending ?? 0),
-  };
+  const reviewCount = (stats.data?.incidents_needing_review ?? 0) + (stats.data?.possible_duplicates_pending ?? 0);
+  const badges: Record<string, number> = { "/live": reviewCount };
+
   return (
     <motion.aside
-      animate={{ width: collapsed ? 76 : 264 }}
-      transition={{ duration: 0.3, ease: EASE }}
-      className="sticky top-0 z-[1000] hidden h-screen shrink-0 flex-col border-r border-white/5 bg-bg/60 px-3 py-4 backdrop-blur-xl md:flex"
+      animate={{ width: collapsed ? 72 : 240 }}
+      transition={{ duration: 0.25, ease: EASE }}
+      className="sticky top-0 z-[1000] hidden h-screen shrink-0 flex-col border-r border-white/5 bg-bg/60 px-3 py-5 backdrop-blur-xl md:flex"
     >
-      <div className="flex items-center gap-3 px-2 pb-5">
-        <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-[#0e1014] shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-          <Mic className="h-[18px] w-[18px] text-[#ff6b4a]" aria-hidden />
-          <span className="absolute inset-0 animate-pulse-ring rounded-full border border-[#ff6b4a]/30" />
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-1 pb-6">
+        <div className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#ff6b4a]/20 bg-[#ff6b4a]/10">
+          <Mic className="h-4 w-4 text-[#ff6b4a]" aria-hidden />
         </div>
         {!collapsed && (
           <div className="min-w-0">
             <div className="text-sm font-semibold leading-tight tracking-tight text-white">Aapda Awaaz</div>
-            <div className="truncate text-2xs text-ink-3" lang="hi">आपदा आवाज़ · Disaster Voice</div>
+            <div className="mt-0.5 flex items-center gap-1 text-2xs text-ink-3">
+              <GnaniLogo size={10} />
+              <span>Gnani AI</span>
+            </div>
           </div>
         )}
       </div>
 
-      <button
-        onClick={openPalette}
-        className="mb-4 flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-sm text-ink-3 transition-colors hover:bg-white/[0.07] hover:text-ink"
-        aria-label="Open command palette"
-      >
-        <Search className="h-4 w-4 shrink-0" aria-hidden />
-        {!collapsed && (
-          <>
-            <span className="flex-1 text-left">Jump to…</span>
-            <kbd className="rounded border border-white/10 px-1.5 py-0.5 font-mono text-2xs">Ctrl K</kbd>
-          </>
-        )}
-      </button>
-
-      <nav className="flex flex-1 flex-col gap-1" aria-label="Main">
+      <nav className="flex flex-1 flex-col gap-0.5" aria-label="Main">
         <LayoutGroup id="nav">
-          {NAV.filter((n) => n.group === "main").map((n) => (
+          {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} title={collapsed ? n.label : undefined} className="relative block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
               {({ isActive }) => (
-                <div className={cn("relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors", isActive ? "text-ink" : "text-ink-3 hover:bg-white/[0.04] hover:text-ink")}>
+                <div className={cn("relative flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-colors", isActive ? "text-ink" : "text-ink-3 hover:bg-white/[0.04] hover:text-ink")}>
                   {isActive && (
                     <motion.span
                       layoutId="nav-active"
-                      className="absolute inset-0 rounded-xl border border-white/10 bg-gradient-to-r from-accent/20 to-white/[0.03]"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                      className="absolute inset-0 rounded-xl bg-white/[0.06]"
+                      transition={{ type: "spring", stiffness: 400, damping: 34 }}
                     />
                   )}
-                  {isActive && <motion.span layoutId="nav-bar" className="absolute -left-3 h-6 w-1 rounded-r-full bg-accent shadow-[0_0_12px_2px_rgba(77,157,255,0.8)]" />}
-                  <n.icon className={cn("relative h-[18px] w-[18px] shrink-0", isActive && "text-accent-glow")} aria-hidden />
-                  {!collapsed && <span className="relative truncate">{n.label}</span>}
+                  {isActive && <motion.span layoutId="nav-bar" className="absolute -left-3 h-5 w-0.5 rounded-r-full bg-accent" />}
+                  <n.icon className={cn("relative h-4 w-4 shrink-0", isActive ? "text-accent-glow" : "")} aria-hidden />
+                  {!collapsed && <span className="relative flex-1 truncate text-[13px]">{n.label}</span>}
                   {!!badges[n.to] && (
-                    <span className={cn("relative ml-auto rounded-full bg-status-critical px-1.5 py-0.5 font-mono text-2xs font-semibold leading-none text-white", collapsed && "absolute right-1 top-1 ml-0")}>
-                      {badges[n.to]}
-                    </span>
-                  )}
-                </div>
-              )}
-            </NavLink>
-          ))}
-          {!collapsed && <div className="mb-1 mt-5 px-3 text-2xs font-medium uppercase tracking-[0.16em] text-ink-3/70">More</div>}
-          {collapsed && <div className="my-3 h-px bg-white/5" />}
-          {NAV.filter((n) => n.group === "more").map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end} title={collapsed ? n.label : undefined} className="relative block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
-              {({ isActive }) => (
-                <div className={cn("relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors", isActive ? "text-ink" : "text-ink-3 hover:bg-white/[0.04] hover:text-ink")}>
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-active"
-                      className="absolute inset-0 rounded-xl border border-white/10 bg-gradient-to-r from-accent/20 to-white/[0.03]"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                    />
-                  )}
-                  {isActive && <motion.span layoutId="nav-bar" className="absolute -left-3 h-6 w-1 rounded-r-full bg-accent shadow-[0_0_12px_2px_rgba(77,157,255,0.8)]" />}
-                  <n.icon className={cn("relative h-[18px] w-[18px] shrink-0", isActive && "text-accent-glow")} aria-hidden />
-                  {!collapsed && <span className="relative truncate">{n.label}</span>}
-                  {!!badges[n.to] && (
-                    <span className={cn("relative ml-auto rounded-full bg-status-critical px-1.5 py-0.5 font-mono text-2xs font-semibold leading-none text-white", collapsed && "absolute right-1 top-1 ml-0")}>
+                    <span className={cn("relative rounded-full bg-status-critical px-1.5 py-0.5 font-mono text-2xs font-semibold leading-none text-white", collapsed && "absolute right-1 top-1")}>
                       {badges[n.to]}
                     </span>
                   )}
@@ -384,36 +351,53 @@ function Sidebar({ collapsed, setCollapsed, openPalette, openShortcuts, dark, to
         </LayoutGroup>
       </nav>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
+        {/* Gnani model indicators */}
+        {!collapsed && (
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 space-y-1.5">
+            <div className="text-2xs font-medium uppercase tracking-[0.14em] text-ink-3/60">Gnani AI Models</div>
+            <div className="flex items-center gap-2 text-2xs text-ink-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-status-good shrink-0" />
+              <span>Prisma v2.5 · STT</span>
+            </div>
+            <div className="flex items-center gap-2 text-2xs text-ink-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-status-good shrink-0" />
+              <span>Timbre v2.5 · TTS</span>
+            </div>
+            <div className="flex items-center gap-2 text-2xs text-ink-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent/70 shrink-0" />
+              <span>Evon v3.3 · Extraction</span>
+            </div>
+          </div>
+        )}
         <LangToggle collapsed={collapsed} />
         <ConnectionPill collapsed={collapsed} />
-        <div className={cn("flex gap-1", collapsed ? "flex-col" : "")}>
+        <div className="flex gap-1">
           <button
             onClick={toggleTheme}
-            className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl text-xs text-ink-3 transition-colors hover:bg-white/5 hover:text-ink"
+            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg text-2xs text-ink-3 transition-colors hover:bg-white/5 hover:text-ink"
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-            title={dark ? "Light mode" : "Dark mode"}
           >
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {dark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             {!collapsed && <span>{dark ? "Light" : "Dark"}</span>}
           </button>
           <button
             onClick={openShortcuts}
-            className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl text-xs text-ink-3 transition-colors hover:bg-white/5 hover:text-ink"
+            className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg text-2xs text-ink-3 transition-colors hover:bg-white/5 hover:text-ink"
             aria-label="Keyboard shortcuts"
-            title="Keyboard shortcuts (?)"
+            title="?"
           >
-            <Keyboard className="h-4 w-4" />
-            {!collapsed && <span>Shortcuts</span>}
+            <Keyboard className="h-3.5 w-3.5" />
+            {!collapsed && <span>Keys</span>}
+          </button>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white/5 hover:text-ink"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronsRight className="h-3.5 w-3.5" /> : <ChevronsLeft className="h-3.5 w-3.5" />}
           </button>
         </div>
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex h-9 w-full items-center justify-center gap-2 rounded-xl text-xs text-ink-3 transition-colors hover:bg-white/5 hover:text-ink"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" /> Collapse</>}
-        </button>
       </div>
     </motion.aside>
   );
@@ -421,9 +405,9 @@ function Sidebar({ collapsed, setCollapsed, openPalette, openShortcuts, dark, to
 
 function MobileNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-[1000] flex justify-around border-t border-white/10 bg-bg/90 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden" aria-label="Main">
-      {NAV.filter((n) => n.group === "main" || n.to === "/settings").map((n) => (
-        <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => cn("flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px]", isActive ? "text-accent-glow" : "text-ink-3")}>
+    <nav className="fixed inset-x-0 bottom-0 z-[1000] flex justify-around border-t border-white/[0.06] bg-bg/90 px-1 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur-xl md:hidden" aria-label="Main">
+      {NAV.map((n) => (
+        <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => cn("flex flex-1 flex-col items-center gap-1 py-2 text-[10px]", isActive ? "text-accent-glow" : "text-ink-3")}>
           <n.icon className="h-5 w-5" aria-hidden />
           {n.label.split(" ")[0]}
         </NavLink>
@@ -481,11 +465,12 @@ export default function App() {
         <div className="ambient-scan" />
       </div>
       <div className="flex min-h-full">
-        <Sidebar collapsed={collapsed} setCollapsed={setSidebar} openPalette={() => setPalette(true)} openShortcuts={() => setShortcuts(true)} dark={dark} toggleTheme={toggleTheme} />
+        <Sidebar collapsed={collapsed} setCollapsed={setSidebar} openShortcuts={() => setShortcuts(true)} dark={dark} toggleTheme={toggleTheme} />
         <div className="flex min-w-0 flex-1 flex-col pb-16 md:pb-0">
-          <div className="border-b border-[#fab219]/20 bg-[#fab219]/[0.06] px-4 py-1.5 text-center text-2xs text-[#fab219]/80 backdrop-blur">
-            SIMULATION — synthetic data · fictional places · does not dispatch responders or contact emergency services ·{" "}
-            <a href="/limitations" className="underline hover:text-[#fab219]">Known Limitations</a>
+          <div className="flex items-center justify-center gap-2 border-b border-white/[0.04] px-4 py-1.5 text-2xs text-ink-3/50">
+            <span>Demo · synthetic data</span>
+            <span aria-hidden>·</span>
+            <span>Built on Gnani AI Prisma · Timbre · Evon</span>
           </div>
           <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 py-6 md:px-8">
             <>
