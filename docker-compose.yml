@@ -1,0 +1,22 @@
+# Aapda Awaaz API.
+#   docker compose up -d --build
+#   docker compose logs -f
+#
+# Secrets and tunables come from the repo-root .env (GNANI_API_KEY, CORS_ORIGINS, ...).
+services:
+  api:
+    build: ./backend
+    image: aapda-awaaz-api:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # SQLite DB, uploads and TTS audio live on the named volume.
+      AAPDA_VAR_DIR: /data
+    ports:
+      - "8000:8000"
+    volumes:
+      - aapda-data:/data
+
+volumes:
+  aapda-data:
