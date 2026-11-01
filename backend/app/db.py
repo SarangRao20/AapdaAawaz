@@ -33,7 +33,25 @@ class Base(DeclarativeBase):
     pass
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+
+# Columns added after initial schema — applied as idempotent ALTER TABLE statements
+_MIGRATIONS: list[str] = [
+    # v2: agentic follow-up fields on reports
+    "ALTER TABLE reports ADD COLUMN follow_up_needed BOOLEAN NOT NULL DEFAULT 0",
+    "ALTER TABLE reports ADD COLUMN follow_up_questions JSON",
+    "ALTER TABLE reports ADD COLUMN follow_up_missing_fields JSON",
+    "ALTER TABLE reports ADD COLUMN follow_up_status VARCHAR(20) NOT NULL DEFAULT 'none'",
+]
+
+
+def _run_migrations(conn) -> None:
+    """Apply ALTER TABLE migrations that SQLite's create_all cannot handle."""
+    for sql in _MIGRATIONS:
+        try:
+            conn.execute(sql)
+        except Exception:
+            pass  # column already exists — ignore duplicate column error
 
 
 def init_db() -> None:
@@ -41,10 +59,15 @@ def init_db() -> None:
     from . import models  # noqa: F401  (register models)
 
     Base.metadata.create_all(engine)
+    with engine.connect() as conn:
+        _run_migrations(conn)
+        conn.commit()
     with session_scope() as db:
         current = db.get(models.AppSetting, "schema_version")
         if current is None:
             db.add(models.AppSetting(key="schema_version", value=SCHEMA_VERSION))
+        elif current.value < SCHEMA_VERSION:
+            current.value = SCHEMA_VERSION
 
 
 def get_db() -> Iterator[Session]:

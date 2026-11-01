@@ -24,6 +24,7 @@ from ..providers.registry import get_stt
 from . import aggregation, gate, matching
 from . import priority as prio
 from .acknowledgement import create_text_ack
+from .followup import generate_questions, missing_fields, needs_followup
 from .extraction import extract
 from .settings_store import get_config
 
@@ -365,11 +366,27 @@ def process_report(db: Session, report_id: str) -> models.Report | None:
         log.info("✓  dedup           outcome=%s  incident=%s  considered=%d",
                  decision.outcome, inc.id, decision.considered)
 
-        # 5. acknowledgement (text only here; audio is generated on request) --
+        # 5. agentic follow-up — detect missing fields, generate targeted questions via Evon
+        lang = ext.get("language", "hi") or "hi"
+        if needs_followup(ext):
+            with stage(db, report, "follow_up", "gnani-evon-v3.3", "real") as fu_job:
+                missing = missing_fields(ext)
+                questions = generate_questions(ext, lang)
+                report.follow_up_needed = True
+                report.follow_up_missing_fields = missing
+                report.follow_up_questions = questions
+                report.follow_up_status = "pending"
+                fu_job.detail = {"missing": missing, "questions": questions}
+            log.info("✓  follow_up       missing=%s  questions=%d", missing, len(questions))
+        else:
+            report.follow_up_needed = False
+            report.follow_up_status = "none"
+
+        # 6. acknowledgement (text only here; audio is generated on request) --
         if not db.scalar(select(func.count()).select_from(models.Acknowledgement).where(
                 models.Acknowledgement.report_id == report.id)):
-            create_text_ack(db, report, ext["language"], ext=ext)
-        log.info("✓  acknowledgement  lang=%s", ext.get("language", "?"))
+            create_text_ack(db, report, lang, ext=ext)
+        log.info("✓  acknowledgement  lang=%s", lang)
 
         report.status = "processed"
         report.processed_at = utcnow()

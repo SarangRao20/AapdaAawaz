@@ -86,6 +86,11 @@ def create_text_ack(
             provider = "gnani-evon-v3.3"
             provider_mode = "real"
 
+    # Embed first follow-up question into TTS so caller hears it automatically
+    if report.follow_up_needed and report.follow_up_questions:
+        first_q = report.follow_up_questions[0]
+        text = f"{text} {first_q}"
+
     ack = models.Acknowledgement(
         report_id=report.id,
         language=lang,

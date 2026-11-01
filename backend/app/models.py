@@ -64,6 +64,12 @@ class Report(Base):
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error: Mapped[str | None] = mapped_column(Text)
 
+    # Agentic follow-up — generated when critical fields (location/type/people) are missing
+    follow_up_needed: Mapped[bool] = mapped_column(Boolean, default=False)
+    follow_up_questions: Mapped[Any | None] = mapped_column(JSON)  # list[str]
+    follow_up_missing_fields: Mapped[Any | None] = mapped_column(JSON)  # list[str]
+    follow_up_status: Mapped[str] = mapped_column(String(20), default="none")  # none | pending | answered
+
     audio_files: Mapped[list["AudioFile"]] = relationship(back_populates="report", cascade="all, delete-orphan")
     jobs: Mapped[list["ProcessingJob"]] = relationship(back_populates="report", cascade="all, delete-orphan",
                                                        order_by="ProcessingJob.id")

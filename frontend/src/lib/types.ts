@@ -214,6 +214,10 @@ export interface ReportDetail extends ReportSummary {
   priority_breakdown: PriorityBreakdown | null;
   dedup_evidence: { outcome: string; best: MatchEvidence | null; suggestions: MatchEvidence[]; considered: number } | MatchEvidence | null;
   auto_incident_id: string | null;
+  follow_up_needed: boolean;
+  follow_up_questions: string[];
+  follow_up_missing_fields: string[];
+  follow_up_status: "none" | "pending" | "answered";
   jobs: Job[];
   links: { incident_id: string; outcome: string; score: number | null; active: boolean; actor: string; created_at: string; deactivated_at: string | null }[];
   suggestions: Suggestion[];
