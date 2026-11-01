@@ -107,13 +107,14 @@ def load_settings() -> Settings:
         prisma_timeout_s=_env_float("PRISMA_TIMEOUT_S", 30.0),
         prisma_max_retries=_env_int("PRISMA_MAX_RETRIES", 3),
         timbre_model=_env("TIMBRE_MODEL", "timbre-v3.0"),
-        # Voice names taken from the Gnani voice catalog (docs.gnani.ai/api/TTS/available-voices);
-        # each timbre-v3.0 voice has one preferred language code (see TIMBRE_LANGUAGE_CODES).
+        # Voices from the Timbre v3.0 catalog (all of them speak every supported
+        # language). The v2.5 names — Nalini, Ishaan, Kaveri, Poorvi — are rejected
+        # by v3.0 with HTTP 400, so do not copy them here.
         timbre_voices={
-            "mr": _env("TIMBRE_VOICE_MR", "Ishaan"),
-            "hi": _env("TIMBRE_VOICE_HI", "Nalini"),
-            "en": _env("TIMBRE_VOICE_EN", "Kaveri"),
-            "mixed": _env("TIMBRE_VOICE_MIXED", "Poorvi"),
+            "mr": _env("TIMBRE_VOICE_MR", "Shivani"),
+            "hi": _env("TIMBRE_VOICE_HI", "Shivani"),
+            "en": _env("TIMBRE_VOICE_EN", "Shivani"),
+            "mixed": _env("TIMBRE_VOICE_MIXED", "Shivani"),
         },
         timbre_timeout_s=_env_float("TIMBRE_TIMEOUT_S", 30.0),
         timbre_max_retries=_env_int("TIMBRE_MAX_RETRIES", 3),
