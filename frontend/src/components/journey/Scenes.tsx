@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertTriangle, Pause, Play, RotateCcw, Sparkles, Users, Volume2 } from "lucide-react";
+import { AlertTriangle, HelpCircle, Pause, Play, RotateCcw, Sparkles, Users, Volume2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../../lib/api";
 import { cn } from "../../lib/cn";
@@ -475,8 +475,15 @@ export function PriorityScene({ d, onDone }: SceneProps) {
   );
 }
 
+const MISSING_LABEL: Record<string, string> = {
+  location_missing: "Location not stated",
+  disaster_unknown: "Disaster type unknown",
+  people_unknown: "People count unknown",
+};
+
 /* 7 ─ Reply ────────────────────────────────────────────────────────────── */
 export function ReplyScene({ d, onDone }: SceneProps) {
+  const r = d.report!;
   const ack = d.ack;
   const { shown, done } = useTypewriter(ack?.text ?? "", !!ack, 24);
   const el = useRef<HTMLAudioElement>(null);
@@ -485,10 +492,13 @@ export function ReplyScene({ d, onDone }: SceneProps) {
   useEffect(() => {
     if (ack?.audio_url) el.current?.play().then(() => setPlaying(true)).catch(() => undefined);
   }, [ack?.audio_url]);
+
+  const followUp = r.follow_up_needed && (r.follow_up_questions?.length ?? 0) > 0;
+
   return (
     <SceneFrame
       title="Closing the loop"
-      blurb="The caller gets a calm reply in their own language, so they know they were heard. Dispatch stays a human decision."
+      blurb={followUp ? "The caller hears an acknowledgement with a targeted follow-up question — critical info was missing." : "The caller gets a calm reply in their own language, so they know they were heard. Dispatch stays a human decision."}
       badge={ack && <StageBadge provider={ack.provider} mode={ack.provider_mode} />}
     >
       <div className="mx-auto flex h-full max-w-2xl flex-col justify-center gap-5">
@@ -512,6 +522,34 @@ export function ReplyScene({ d, onDone }: SceneProps) {
               </div>
             ) : (
               <p className="text-xs text-ink-3">Text only — voice playback needs the speech service, which isn't available right now. Nothing is faked.</p>
+            )}
+
+            {followUp && (
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.4, duration: 0.5 }}
+                className="rounded-2xl border border-[#f59e0b]/25 bg-[#f59e0b]/[0.06] p-4"
+              >
+                <div className="mb-2.5 flex items-center gap-2 text-2xs font-semibold uppercase tracking-wider text-[#f59e0b]">
+                  <HelpCircle className="h-3.5 w-3.5" /> Agentic follow-up — embedded in the reply
+                </div>
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {(r.follow_up_missing_fields ?? []).map((f) => (
+                    <span key={f} className="rounded-full border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-2.5 py-0.5 text-2xs text-[#f59e0b]">
+                      {MISSING_LABEL[f] ?? f}
+                    </span>
+                  ))}
+                </div>
+                <ul className="space-y-2">
+                  {(r.follow_up_questions ?? []).map((q, i) => (
+                    <motion.li key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.6 + i * 0.2 }} className="flex items-start gap-2 text-sm text-ink-2">
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full bg-[#f59e0b]/20 text-center text-2xs leading-4 text-[#f59e0b]">{i + 1}</span>
+                      {q}
+                    </motion.li>
+                  ))}
+                </ul>
+              </motion.div>
             )}
           </>
         ) : (

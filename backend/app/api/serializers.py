@@ -119,6 +119,10 @@ def report_detail(db: Session, rep: models.Report) -> dict:
         "priority_breakdown": rep.priority_breakdown,
         "dedup_evidence": rep.dedup_evidence,
         "auto_incident_id": rep.auto_incident_id,
+        "follow_up_needed": rep.follow_up_needed,
+        "follow_up_questions": rep.follow_up_questions or [],
+        "follow_up_missing_fields": rep.follow_up_missing_fields or [],
+        "follow_up_status": rep.follow_up_status,
         "jobs": [job_view(j) for j in rep.jobs],
         "links": [{"incident_id": l.incident_id, "outcome": l.outcome, "score": l.score, "active": l.active,
                    "actor": l.actor, "created_at": iso(l.created_at), "deactivated_at": iso(l.deactivated_at)}

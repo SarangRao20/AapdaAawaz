@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { AudioLines, Brain, Check, ChevronRight, FastForward, Flame, GitMerge, Gauge, Loader2, MapPin, Mic, MountainSnow, Pause, Play, RotateCcw, Volume2, Waves, type LucideIcon } from "lucide-react";
+import { AudioLines, Brain, Check, ChevronRight, FastForward, Flame, GitMerge, Gauge, HelpCircle, Loader2, MapPin, Mic, MountainSnow, Pause, Play, RotateCcw, Volume2, Waves, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AudioRecorder } from "../components/AudioRecorder";
@@ -19,7 +19,7 @@ const STEPS: { label: string; sub: string; icon: LucideIcon; stage?: string }[] 
   { label: "Locate", sub: "Pin on the globe", icon: MapPin },
   { label: "Match", sub: "Same incident?", icon: GitMerge, stage: "deduplication" },
   { label: "Prioritise", sub: "How urgent", icon: Gauge, stage: "priority" },
-  { label: "Reply", sub: "Gnani Timbre TTS", icon: Volume2 },
+  { label: "Reply", sub: "Gnani Timbre TTS", icon: Volume2, stage: "follow_up" },
 ];
 
 /* ───────────────────────────── start screen ───────────────────────────── */
