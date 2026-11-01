@@ -216,11 +216,11 @@ function Dots() {
 
 /* ── stage row ───────────────────────────────────────────────────────────── */
 const STAGES = [
-  { key: "transcription", label: "Gnani Prisma — transcribing speech" },
-  { key: "extraction",    label: "Gnani Evon — extracting facts" },
-  { key: "priority",      label: "Assigning priority" },
-  { key: "follow_up",     label: "Checking for missing info" },
-  { key: "acknowledgement", label: "Gnani Timbre — preparing reply" },
+  { key: "transcription",   label: "Transcribing speech" },
+  { key: "extraction",      label: "Extracting facts" },
+  { key: "priority",        label: "Assigning priority" },
+  { key: "confidence_gate", label: "Checking confidence" },
+  { key: "deduplication",   label: "Checking for duplicate reports" },
 ];
 function StageRow({ label, done }: { label: string; done: boolean }) {
   return (
@@ -392,14 +392,16 @@ export default function App() {
 
   /* ── PROCESSING ───────────────────────────────────────────────────────── */
   if (screen === "processing") {
-    const jobs = (status as any)?.jobs ?? [];
-    const doneStages = new Set(jobs.filter((j: any) => j.status === "succeeded").map((j: any) => j.stage));
+    // A skipped stage is finished too: e.g. transcription when the transcript already exists.
+    const doneStages = new Set(
+      (status?.jobs ?? []).filter((j) => j.status === "succeeded" || j.status === "skipped").map((j) => j.stage),
+    );
     return (
       <div className="h-full flex flex-col items-center justify-center px-5 gap-8">
         <div className="text-center">
           <Dots />
           <p className="mt-4 text-base font-semibold text-[#f2f2f2]">Processing your report</p>
-          <p className="mt-1 text-sm text-[#525252]">Gnani AI pipeline is running…</p>
+          <p className="mt-1 text-sm text-[#525252]">Please keep this screen open…</p>
         </div>
         <div className="w-full max-w-sm space-y-3 bg-[#111] rounded-2xl border border-white/8 p-4">
           {STAGES.map((s) => <StageRow key={s.key} label={s.label} done={doneStages.has(s.key)} />)}

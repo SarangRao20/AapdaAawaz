@@ -1,5 +1,10 @@
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
+export interface ReportJob {
+  stage: string;
+  status: string;
+}
+
 export interface ReportStatus {
   id: string;
   status: string;
@@ -12,6 +17,7 @@ export interface ReportStatus {
   follow_up_questions: string[];
   acknowledgement: { text: string; audio_url: string | null } | null;
   error: string | null;
+  jobs: ReportJob[];
 }
 
 export async function uploadAudio(file: File, languageHint: string): Promise<string> {
@@ -63,9 +69,10 @@ export async function pollReport(id: string): Promise<ReportStatus> {
     follow_up_questions: d.follow_up_questions ?? [],
     acknowledgement: ack ? { text: ack.text, audio_url: ackAudio } : null,
     error: d.error ?? null,
+    jobs: d.jobs ?? [],
   };
 }
 
 export async function triggerAck(id: string): Promise<void> {
-  await fetch(`${BASE}/api/reports/${id}/acknowledge`, { method: "POST" });
+  await fetch(`${BASE}/api/reports/${id}/acknowledgement`, { method: "POST" });
 }
