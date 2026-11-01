@@ -4,6 +4,8 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // 5173 belongs to the dashboard; the backend's CORS defaults allow this port.
+  server: { port: 5174 },
   plugins: [
     react(),
     tailwindcss(),
