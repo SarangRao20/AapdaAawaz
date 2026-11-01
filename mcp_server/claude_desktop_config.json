@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "aapda-awaaz": {
+      "command": "/ABSOLUTE/PATH/TO/mcp_server/venv/bin/python",
+      "args": ["/ABSOLUTE/PATH/TO/mcp_server/server.py"],
+      "env": {
+        "AAPDA_API_URL": "http://localhost:8000"
+      }
+    }
+  }
+}
