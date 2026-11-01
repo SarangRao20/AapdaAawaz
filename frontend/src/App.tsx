@@ -468,8 +468,6 @@ export default function App() {
         <Sidebar collapsed={collapsed} setCollapsed={setSidebar} openShortcuts={() => setShortcuts(true)} dark={dark} toggleTheme={toggleTheme} />
         <div className="flex min-w-0 flex-1 flex-col pb-16 md:pb-0">
           <div className="flex items-center justify-center gap-2 border-b border-white/[0.04] px-4 py-1.5 text-2xs text-ink-3/50">
-            <span>Demo · synthetic data</span>
-            <span aria-hidden>·</span>
             <span>Built on Gnani AI Prisma · Timbre · Evon</span>
           </div>
           <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 py-6 md:px-8">

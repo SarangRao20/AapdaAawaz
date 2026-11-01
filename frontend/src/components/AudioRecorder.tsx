@@ -59,7 +59,7 @@ export function AudioRecorder({ onRecorded, disabled }: { onRecorded: (wav: Blob
   }
 
   if (!supported)
-    return <p className="text-xs text-ink-3">This browser does not support microphone recording. Upload a file or use the synthetic demo data instead.</p>;
+    return <p className="text-xs text-ink-3">This browser does not support microphone recording. Upload an audio file instead.</p>;
 
   return (
     <div className="space-y-2">

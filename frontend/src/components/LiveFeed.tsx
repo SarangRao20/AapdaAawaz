@@ -75,7 +75,7 @@ export function LiveFeed({ items, compact }: { items: ReportSummary[]; compact?:
   if (!items.length)
     return (
       <Empty icon={<FileAudio className="h-6 w-6" />} title="No reports yet">
-        Upload or record audio on the Incoming Reports page, or use the demo controls to load synthetic reports.
+        Upload or record audio on the Incoming Reports page to begin.
       </Empty>
     );
   return (

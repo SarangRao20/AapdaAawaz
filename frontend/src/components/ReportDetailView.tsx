@@ -241,7 +241,7 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
 
       {r.ground_truth && (
         <details className="text-xs">
-          <summary className="cursor-pointer text-ink-3">Synthetic ground-truth label (for evaluation only)</summary>
+          <summary className="cursor-pointer text-ink-3">Ground-truth label (evaluation)</summary>
           <pre className="mt-1 overflow-x-auto rounded bg-surface-2 p-2 text-2xs text-ink-2">{JSON.stringify(r.ground_truth, null, 2)}</pre>
         </details>
       )}

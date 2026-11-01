@@ -34,7 +34,7 @@ function markerIcon(i: Incident, selected: boolean): L.DivIcon {
 function tooltipHtml(i: Incident): string {
   return `<div class="aa-tt"><b>${escapeHtml(i.id)}</b> · <span style="color:${PRIORITY_COLOR[i.priority_label]}">${i.priority_label.toUpperCase()}</span><br/>
     ${escapeHtml(locationText(i))}<br/>People: ${escapeHtml(peopleText(i))} · Reports: ${i.report_count}<br/>
-    <i>${i.location_status === "human_verified" ? "Verified location" : "Simulated reference point — unverified"}</i></div>`;
+    <i>${i.location_status === "human_verified" ? "Verified location" : "Reference location (unverified)"}</i></div>`;
 }
 
 export function IncidentMap({
@@ -117,7 +117,7 @@ export function IncidentMap({
     layer.clearLayers();
     for (const p of places) {
       L.circleMarker([p.latitude, p.longitude], { radius: 3, color: "#737373", weight: 1, fillOpacity: 0.4, interactive: false })
-        .bindTooltip(`${escapeHtml(p.name)} (simulated)`, { permanent: true, direction: "right", className: "aa-place-label", offset: [4, 0] })
+        .bindTooltip(escapeHtml(p.name), { permanent: true, direction: "right", className: "aa-place-label", offset: [4, 0] })
         .addTo(layer);
     }
     if (places.length && !fitted.current) {
@@ -153,7 +153,7 @@ export function IncidentMap({
       </div>
       {compactLegend ? (
         <div className="absolute bottom-2 left-2 z-[500] rounded-lg border border-white/10 bg-bg/80 px-2 py-1 backdrop-blur text-2xs text-ink-2">
-          Dashed ring = simulated reference (unverified) · solid green = verified
+          Dashed ring = reference location (unverified) · solid green = verified
         </div>
       ) : (
       <div className="absolute bottom-2 left-2 z-[500] rounded-xl border border-white/10 bg-bg/80 px-3 py-2.5 backdrop-blur text-2xs text-ink-2">
@@ -168,14 +168,14 @@ export function IncidentMap({
         </div>
         <div className="mt-1.5 flex gap-3">
           <span className="inline-flex items-center gap-1">
-            <span className="inline-block h-3 w-3 rounded-full border-2 border-dashed border-ink-2" /> simulated ref · unverified
+            <span className="inline-block h-3 w-3 rounded-full border-2 border-dashed border-ink-2" /> reference · unverified
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="inline-block h-3 w-3 rounded-full border-2 border-[#9fe0a8]" /> verified
           </span>
         </div>
         <div className="mt-1 text-ink-3">Filled marker: number = linked reports. Dark ring: incidents grouped at one point (click to expand).</div>
-        <div className="text-ink-3">Fictional places at simulated positions; not real emergencies. Click the map to enable wheel zoom.</div>
+        <div className="text-ink-3">Click the map to enable wheel zoom.</div>
       </div>
       )}
     </div>
