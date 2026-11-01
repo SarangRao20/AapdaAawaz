@@ -115,9 +115,36 @@ Stop the API before running `reset` from the command line (or use the Reset butt
 ### Tests and build
 
 ```powershell
-cd backend;  .\.venv\Scripts\python -m pytest -q          # 47 tests
+cd backend;  .\.venv\Scripts\python -m pytest -q          # 76 tests
 cd frontend; npm test; npm run build                       # 5 tests + typecheck + production build
 ```
+
+### CI/CD
+
+`.github/workflows/ci-cd.yml` runs on every push and pull request:
+
+| Job | What it checks |
+|---|---|
+| Backend | `pip install`, byte-compile, `pytest tests` (`test_live_api.py` is excluded — it calls the paid Gnani API) |
+| Frontend | `npm ci`, `tsc`, `vitest`, production build |
+| Caller app | `npm ci`, `oxlint`, web build |
+
+A push to `main` that passes all three then deploys automatically (a manual
+`workflow_dispatch` on `main` does the same). The deploy job tars `backend/`,
+copies it to the VM and runs `.github/scripts/remote_deploy.sh` there, which:
+
+1. backs up the live code to `~/aapda/.deploy/backups/` (last 5 kept),
+2. rsyncs the new tree, leaving `venv/`, `var/` (database, uploads) and `.env` untouched,
+3. installs dependencies only if `requirements.txt` changed,
+4. restarts the `aapda-api` systemd unit and polls `/api/health`,
+5. restores the backup and restarts if anything fails, then exits non-zero.
+
+The live commit is recorded in `~/aapda/.deploy/DEPLOYED_SHA` and every run is
+appended to `~/aapda/.deploy/deploy.log`.
+
+Repository secrets required (Settings → Secrets and variables → Actions):
+`VM_HOST`, `VM_USER`, `VM_SSH_KEY` (private key, public half in
+`~/.ssh/authorized_keys` on the VM) and optionally `VM_PORT` (default 22).
 
 ---
 

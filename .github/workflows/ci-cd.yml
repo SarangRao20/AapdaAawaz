@@ -1,0 +1,164 @@
+name: CI / CD
+
+# Checks run on every push and pull request. Deployment runs only for pushes to
+# main (or a manual dispatch on main), after all checks pass.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  # Never cancel a deploy halfway through: a half-synced tree is worse than a wait.
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Byte-compile (catches syntax errors in files tests never import)
+        run: python -m compileall -q app
+
+      # Only tests/ runs: backend/test_live_api.py hits the paid Gnani API.
+      - name: Run tests
+        run: python -m pytest tests -q
+
+  frontend:
+    name: Frontend (typecheck, test, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  caller-app:
+    name: Caller app (lint, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: caller-app
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: caller-app/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  deploy:
+    name: Deploy to Azure VM
+    needs: [backend, frontend, caller-app]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check deploy configuration
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          for name in VM_HOST VM_USER VM_SSH_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret $name is not set"
+              exit 1
+            fi
+          done
+
+      - name: Package backend
+        run: |
+          tar -czf "$RUNNER_TEMP/backend.tar.gz" -C backend \
+            --exclude=venv \
+            --exclude=var \
+            --exclude=.env \
+            --exclude=__pycache__ \
+            --exclude=.pytest_cache \
+            .
+          ls -lh "$RUNNER_TEMP/backend.tar.gz"
+
+      - name: Configure SSH
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_PORT: ${{ secrets.VM_PORT }}
+        run: |
+          PORT="${VM_PORT:-22}"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$PORT" -H "$VM_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH_OPTS=-i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -p $PORT" >> "$GITHUB_ENV"
+          echo "SCP_OPTS=-i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -P $PORT" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          ssh $SSH_OPTS "$VM_USER@$VM_HOST" 'mkdir -p ~/aapda/.deploy/incoming'
+          scp $SCP_OPTS \
+            "$RUNNER_TEMP/backend.tar.gz" \
+            "$VM_USER@$VM_HOST:~/aapda/.deploy/incoming/backend.tar.gz"
+
+      - name: Deploy (with automatic rollback on failure)
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          ssh $SSH_OPTS "$VM_USER@$VM_HOST" \
+            "bash -s -- ~/aapda/.deploy/incoming/backend.tar.gz ${{ github.sha }}" \
+            < .github/scripts/remote_deploy.sh
+
+      - name: Public reachability check (informational)
+        continue-on-error: true
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+        run: |
+          curl -fsS --retry 3 --retry-delay 3 -m 15 "http://$VM_HOST:8000/api/health" | head -c 500
