@@ -43,39 +43,164 @@ const AlertIcon = () => (
   </svg>
 );
 
+/* ── recording format helpers ───────────────────────────────────────────── */
+const MAX_SECONDS = 30; // Gnani Prisma accepts at most 30 s per request
+
+/** MediaRecorder only produces webm/mp4/ogg; the API accepts WAV/MP3/M4A/OGG/FLAC. */
+function encodeWav(samples: Float32Array, sampleRate: number): Blob {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  const str = (off: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
+  };
+  str(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 2, true);
+  str(8, "WAVE");
+  str(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  str(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+  let off = 44;
+  for (let i = 0; i < samples.length; i++, off += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([view], { type: "audio/wav" });
+}
+
+async function toWav(blob: Blob): Promise<Blob> {
+  const ctx = new AudioContext();
+  try {
+    const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
+    const len = decoded.length;
+    const mono = new Float32Array(len);
+    for (let c = 0; c < decoded.numberOfChannels; c++) {
+      const ch = decoded.getChannelData(c);
+      for (let i = 0; i < len; i++) mono[i] += ch[i] / decoded.numberOfChannels;
+    }
+    return encodeWav(mono, decoded.sampleRate);
+  } finally {
+    void ctx.close();
+  }
+}
+
+const MIME_CANDIDATES = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/mp4",
+  "audio/ogg;codecs=opus",
+  "audio/ogg",
+];
+
+function pickMimeType(): string | undefined {
+  if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return undefined;
+  return MIME_CANDIDATES.find((t) => MediaRecorder.isTypeSupported(t));
+}
+
+function describeMicError(e: unknown): string {
+  switch ((e as { name?: string } | null)?.name) {
+    case "NotAllowedError":
+    case "SecurityError":
+      return "Microphone blocked. Settings → Apps → Aapda Awaaz → Permissions → allow Microphone, then try again.";
+    case "NotFoundError":
+    case "OverconstrainedError":
+      return "No microphone found on this device.";
+    case "NotReadableError":
+      return "The microphone is busy in another app. Close it and try again.";
+    default:
+      return e instanceof Error ? e.message : "Could not start recording.";
+  }
+}
+
 /* ── recorder hook ───────────────────────────────────────────────────────── */
 function useRecorder() {
   const [recording, setRecording] = useState(false);
-  const [blob, setBlob] = useState<Blob | null>(null);
+  const [wav, setWav] = useState<Blob | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const mr = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const timer = useRef<number | null>(null);
-
-  const start = async () => {
-    chunks.current = [];
-    setBlob(null);
-    setSeconds(0);
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const rec = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
-    mr.current = rec;
-    rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.current.push(e.data); };
-    rec.onstop = () => {
-      stream.getTracks().forEach((t) => t.stop());
-      setBlob(new Blob(chunks.current, { type: "audio/webm" }));
-    };
-    rec.start(200);
-    setRecording(true);
-    timer.current = window.setInterval(() => setSeconds((s) => s + 1), 1000);
-  };
+  const stopRef = useRef<() => void>(() => {});
 
   const stop = () => {
-    mr.current?.stop();
-    if (timer.current) clearInterval(timer.current);
+    if (timer.current) {
+      clearInterval(timer.current);
+      timer.current = null;
+    }
     setRecording(false);
+    if (mr.current && mr.current.state !== "inactive") mr.current.stop();
+  };
+  stopRef.current = stop;
+
+  // Hard stop at the 30 s API limit.
+  useEffect(() => {
+    if (recording && seconds >= MAX_SECONDS) stopRef.current();
+  }, [recording, seconds]);
+
+  const start = async () => {
+    setError(null);
+    setWav(null);
+    setSeconds(0);
+    chunks.current = [];
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("This app build cannot access the microphone. Install the latest APK.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+      const mimeType = pickMimeType();
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mr.current = rec;
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.current.push(e.data);
+      };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const raw = new Blob(chunks.current, { type: rec.mimeType || "audio/webm" });
+        if (raw.size === 0) {
+          setError("That recording was too short. Hold the mic and speak for a few seconds.");
+          return;
+        }
+        setPreparing(true);
+        toWav(raw)
+          .then((out) => setWav(out))
+          .catch(() => setError("Could not process that recording. Please record again."))
+          .finally(() => setPreparing(false));
+      };
+      rec.start(250);
+      setRecording(true);
+      timer.current = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+    } catch (e) {
+      setError(describeMicError(e));
+    }
   };
 
-  return { recording, blob, seconds, start, stop, reset: () => { setBlob(null); setSeconds(0); } };
+  return {
+    recording,
+    wav,
+    preparing,
+    seconds,
+    error,
+    start,
+    stop,
+    reset: () => {
+      setWav(null);
+      setSeconds(0);
+      setError(null);
+    },
+  };
 }
 
 /* ── processing dots ─────────────────────────────────────────────────────── */
@@ -154,8 +279,8 @@ export default function App() {
       let id: string;
       if (file) {
         id = await uploadAudio(file, lang);
-      } else if (rec.blob) {
-        const wav = new File([rec.blob], "recording.webm", { type: "audio/webm" });
+      } else if (rec.wav) {
+        const wav = new File([rec.wav], "recording.wav", { type: "audio/wav" });
         id = await uploadAudio(wav, lang);
       } else {
         throw new Error("No audio");
@@ -208,7 +333,8 @@ export default function App() {
             )}
             <button
               onClick={() => (rec.recording ? rec.stop() : void rec.start())}
-              className={`relative w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-lg ${rec.recording ? "bg-[#ef4444] scale-110" : "bg-[#f97316] hover:scale-105 active:scale-95"}`}
+              disabled={rec.preparing}
+              className={`relative w-28 h-28 rounded-full flex items-center justify-center transition-all shadow-lg disabled:opacity-60 ${rec.recording ? "bg-[#ef4444] scale-110" : "bg-[#f97316] hover:scale-105 active:scale-95"}`}
               aria-label={rec.recording ? "Stop recording" : "Start recording"}
             >
               <MicIcon />
@@ -217,11 +343,15 @@ export default function App() {
 
           {rec.recording && (
             <div className="text-[#ef4444] text-sm font-mono animate-pulse">
-              ● REC {String(Math.floor(rec.seconds / 60)).padStart(2, "0")}:{String(rec.seconds % 60).padStart(2, "0")}
+              ● REC {String(Math.floor(rec.seconds / 60)).padStart(2, "0")}:{String(rec.seconds % 60).padStart(2, "0")} / 00:{MAX_SECONDS}
             </div>
           )}
 
-          {rec.blob && !rec.recording && (
+          {rec.preparing && (
+            <div className="text-sm text-[#a3a3a3]">Preparing audio…</div>
+          )}
+
+          {rec.wav && !rec.recording && !rec.preparing && (
             <div className="w-full max-w-xs space-y-3">
               <div className="text-center text-sm text-[#22c55e]">Recording ready ({rec.seconds}s)</div>
               <button
@@ -237,7 +367,7 @@ export default function App() {
             </div>
           )}
 
-          {!rec.recording && !rec.blob && (
+          {!rec.recording && !rec.wav && !rec.preparing && (
             <p className="text-[#525252] text-sm text-center max-w-[220px]">
               Tap the mic to record your emergency report in {LANG_LABELS[lang]}
             </p>
@@ -250,9 +380,9 @@ export default function App() {
             Or upload an audio file
             <input type="file" accept="audio/*" className="hidden" onChange={(e) => e.target.files?.[0] && void submit(e.target.files[0])} />
           </label>
-          {err && (
-            <div className="mt-3 flex items-center gap-2 text-[#ef4444] text-xs">
-              <AlertIcon /> {err}
+          {(err || rec.error) && (
+            <div className="mt-3 flex items-start gap-2 text-[#ef4444] text-xs">
+              <span className="mt-0.5 flex-shrink-0"><AlertIcon /></span> {err ?? rec.error}
             </div>
           )}
         </div>
