@@ -78,6 +78,8 @@ def score(f: SeverityFeatures, cfg: dict, override_label: str | None = None) -> 
     basic = sorted(f.needs & BASIC_NEEDS)
     if basic:
         add("basic_needs", "Basic needs", ", ".join(basic))
+    if "fire_services" in f.needs:
+        add("fire_services", "Fire services requested", "fire brigade or fire services requested")
     if "medical" in f.needs:
         add("medical_need", "Medical help requested", "medicine, doctor or ambulance requested")
     esc = sorted(f.dangers & ESCALATING_DANGERS)
@@ -103,7 +105,14 @@ def score(f: SeverityFeatures, cfg: dict, override_label: str | None = None) -> 
     label = computed
 
     says_safe = bool(f.status_claims & {"reported_safe", "reported_evacuated"})
-    acute = bool(life) or bool(f.medical_emergency) or "injured" in f.dangers
+    # When evacuation is confirmed, historical positional dangers (on_roof, trapped, surrounded)
+    # are resolved — only ongoing acute dangers (medical, injury, active fire) block the cap.
+    POSITIONAL_RESOLVED_BY_EVACUATION = {"on_roof", "trapped", "surrounded_by_water"}
+    if says_safe and "reported_evacuated" in f.status_claims:
+        unresolved_life = (f.dangers & LIFE_THREAT_DANGERS) - POSITIONAL_RESOLVED_BY_EVACUATION
+        acute = bool(unresolved_life) or bool(f.medical_emergency) or "injured" in f.dangers
+    else:
+        acute = bool(life) or bool(f.medical_emergency) or "injured" in f.dangers
     if says_safe and not acute:
         cap = cfg["priority"]["safe_status_cap"]
         if LABEL_RANK[label] > LABEL_RANK[cap]:

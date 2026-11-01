@@ -9,7 +9,7 @@ from __future__ import annotations
 
 DISASTER_KEYWORDS: dict[str, list[str]] = {
     "flood": [
-        "पूर", "पुरा*", "पूरग्रस्त*", "बाढ*", "baadh", "flood*",
+        "पूर", "पुरा*", "पूरग्रस्त*", "बाढ*", "baadh", "flood*", "paani*", "pani*",
         "पाणी भरल*", "पानी भर*", "paani bhar*", "pani bhar*", "पाणी शिरल*", "पानी घुस*",
         "नदीचे पाणी", "nadi ka paani", "पाणी वाढत*", "पानी बढ*", "पाण्याने वेढ*", "पानी से घिर*",
     ],
@@ -21,21 +21,24 @@ DISASTER_TIEBREAK = ["fire", "earthquake", "landslide", "flood"]
 
 DANGER_KEYWORDS: dict[str, list[str]] = {
     "trapped": ["अडक*", "फंस*", "फसे", "फसी", "फसा", "phas*", "phans*", "fase", "fasi", "fanse",
-                "trapped", "stuck", "स्टक*", "बाहेर पडता येत नाही", "निकल नहीं पा*"],
+                "trapped", "stuck", "स्टक*", "stranded", "बाहेर पडता येत नाही", "निकल नहीं पा*"],
     "surrounded_by_water": ["वेढ*", "चारों तरफ", "चारो तरफ", "घिरे", "घिर गय*", "ghire", "surrounded", "चोहोबाजूंनी"],
     "on_roof": ["छतावर*", "छप्परावर*", "पत्र्यावर*", "छत पर", "छत पे", "chhat par", "chhat pe", "chat par", "roof*"],
     "water_rising": ["पाणी वाढत*", "पानी बढ*", "badh raha", "badh rahi", "बढ रहा", "rising", "वाढत आहे"],
     "flooding_inside_home": ["पाणी घरात", "घरात पाणी", "पाणी शिरल*", "पानी घुस*", "घरों में पानी", "ghar mein paani",
-                             "entered the house*", "water inside", "inside the house*"],
+                             "ghar ke andar", "घर के अंदर पानी", "entered the house*", "water inside", "inside the house*",
+                             "feet paani", "feet water", "foot water", "water level"],
     "swept_away": ["वाहून*", "बह गय*", "बह गई", "बह गए", "beh gay*", "bah gay*", "swept away", "washed away"],
     "drowning": ["बुडत*", "बुडाल*", "डूब*", "doob*", "drown*"],
-    "structure_collapse": ["कोसळ*", "ढासळ*", "गिर गय*", "गिर गई", "गिर गए", "gir gay*", "collapsed", "collapse", "ढह*"],
+    "structure_collapse": ["कोसळ*", "ढासळ*", "गिर गय*", "गिर गई", "गिर गए", "gir gay*", "collapsed", "collapse", "ढह*",
+                           "crack*", "cracking", "shaking", "trembling", "tilting"],
     "under_debris": ["ढिगाऱ्या*", "ढिगार*", "मलबे में", "मलबे के नीचे", "दब*", "debris", "rubble", "malbe mein", "dabe", "dabi"],
     "injured": ["जखमी*", "घायल*", "ghayal", "injured", "injury", "injuries", "hurt", "चोट*", "भाजल*", "जल गय*", "burn*"],
     "unconscious": ["बेशुद्ध*", "बेहोश*", "behosh", "unconscious", "drowsy", "not responding"],
     "active_fire": ["आग लाग*", "आग लगी", "aag lag*", "fire broke", "on fire", "आगीत"],
     "missing_person": ["बेपत्ता*", "लापता*", "laapata", "lapata", "missing"],
-    "road_blocked": ["रस्ता बंद", "रास्ता बंद", "पूर्ण बंद", "road band", "road is blocked", "road blocked", "blocked"],
+    "road_blocked": ["रस्ता बंद", "रास्ता बंद", "पूर्ण बंद", "road band", "road is blocked", "road blocked", "blocked",
+                    "queued", "queue", "vehicles stuck", "stuck behind"],
 }
 # Explicit immediate-threat-to-life indicators (see priority engine).
 LIFE_THREAT_DANGERS = {
@@ -49,13 +52,14 @@ MEDICAL_EMERGENCY_KEYWORDS = [
     "प्रसूती*", "प्रसव*", "delivery case", "delivery", "labour pain*", "labor pain*", "डिलीवरी*",
     "भाजल*", "जल गय*", "burn*", "burned",
     "साप चाव*", "सांप ने काट*", "snake bite", "snakebite", "bitten by a snake", "bitten",
-    "heart attack", "हृदयविकार*", "छाती में दर्द", "सांस नहीं", "saans nahi", "श्वास घेता येत नाही",
+    "heart attack", "हृदयविकार*", "छाती में दर्द", "chest pain", "chest pain*", "दिल का दर्द", "सांस नहीं", "saans nahi", "श्वास घेता येत नाही",
     "breathing difficulty", "can't breathe", "bleeding", "रक्तस्त्राव*", "खून बह*",
 ]
 CRITICAL_MEDICATION_KEYWORDS = ["इन्सुलिन*", "इंसुलिन*", "insulin", "ऑक्सिजन*", "ऑक्सीजन*", "oxygen", "dialysis", "डायलिसिस*"]
 MEDICAL_NEED_KEYWORDS = CRITICAL_MEDICATION_KEYWORDS + [
     "औषध*", "दवा", "दवाई*", "dawai", "dawa", "medicine*", "डॉक्टर*", "doctor*",
     "रुग्णवाहिका*", "एम्बुलेंस*", "एंबुलेंस*", "ambulance*",
+    "bimar*", "bimaar", "sick", "unwell", "dawai chahiye", "dawai", "dawa chahiye",
 ]
 
 NEED_KEYWORDS: dict[str, list[str]] = {
@@ -84,16 +88,20 @@ URGENCY_KEYWORDS: dict[str, list[str]] = {
 }
 STATUS_KEYWORDS: dict[str, list[str]] = {
     "reported_safe": ["सुरक्षित*", "safe", "ठीक है", "ठीक आहे", "theek hai", "thik hai"],
-    "reported_evacuated": ["निकल गय*", "nikal gay*", "evacuated", "बाहेर पडलो", "सुरक्षित ठिकाणी"],
+    "reported_evacuated": ["निकल गय*", "nikal gay*", "evacuated", "बाहेर पडलो", "सुरक्षित ठिकाणी",
+                          "बाहेर काढले", "बाहेर काढल*", "बाहर निकाल दिया", "rescue complete", "all rescued",
+                          "कोणी अडकलेले नाही", "सगळ्यांना काढले"],
 }
 
 VULNERABLE_KEYWORDS: dict[str, list[str]] = {
     "elderly": ["वृद्ध*", "म्हातार*", "ज्येष्ठ*", "आजी*", "आजोबा*", "बुजुर्ग*", "बूढ*", "बुढ*", "दादी*", "नानी*",
-                "buzurg*", "budhe", "budhi", "buddhe", "elderly", "senior*", "old man", "old woman", "old people",
+                "buzurg*", "budhe", "budhi", "buddhe", "elderly", "senior*", "old man", "old woman", "old lady", "old people",
+                "grandmother", "dadi", "nani", "aaji", "आजी", "दादी", "नानी",
                 "aaji", "ajoba"],
     "children": ["मुले", "मुलं", "मुलां*", "मुलगा", "मुलगी", "विद्यार्थी*", "बच्चे", "बच्चों*", "बच्चा", "बच्ची",
                  "बालक*", "छात्र*", "bacche", "bachche", "bachhe", "baccha", "bachcha", "children", "child", "kids",
-                 "kid", "boy", "girl", "students", "mule"],
+                 "kid", "boy", "girl", "students", "mule",
+                "bachcha*", "bacha*", "bachche", "kid", "kids", "child", "children"],
     "infants": ["बाळ", "बाळाला", "बाळाचे", "बाळं", "तान्ह*", "नवजात*", "शिशु*", "baby", "babies", "infant*", "newborn*"],
     "pregnant_people": ["गरोदर*", "गर्भवती*", "प्रेग्नेंट*", "pregnant*", "garbhvati", "garbhwati", "प्रसूती*", "प्रसव*",
                         "delivery case", "labour pain*", "labor pain*"],
@@ -107,7 +115,9 @@ PEOPLE_NOUNS = ["लोक*", "जण*", "लोग*", "व्यक्ती*",
 FAMILY_NOUNS = ["कुटुंब*", "परिवार*", "families", "family", "parivar", "kutumb"]
 APPROXIMATORS = {"सुमारे", "जवळपास", "अंदाजे", "साधारण", "लगभग", "करीब", "तकरीबन", "lagbhag", "kareeb", "karib",
                  "takriban", "around", "about", "approx", "approximately", "roughly", "nearly", "असतील", "होंगे",
-                 "honge", "maybe", "jawalpas"}
+                 "honge", "maybe", "jawalpas",
+                 "से ज्यादा", "से ज़्यादा", "se zyada", "se jyada", "more than", "above", "over", "at least",
+                 "पेक्षा जास्त", "पेक्षा अधिक"}
 VAGUE_QUANTIFIERS = {"बरेच", "खूप", "अनेक", "बहुत", "कई", "कुछ", "सारे", "सब", "सगळे", "many", "several", "some",
                      "lots", "bahut", "kai", "kuch", "sab", "saare"}
 RANGE_CONNECTORS = {"ते", "से", "to", "ya", "किंवा", "या"}
