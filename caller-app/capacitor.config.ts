@@ -5,8 +5,10 @@ const config: CapacitorConfig = {
   appName: "Aapda Awaaz",
   webDir: "dist",
   server: {
-    // For local dev with live-reload; remove before release APK
-    // url: "http://192.168.x.x:5173",
+    // The app is served from http://localhost. "localhost" is still a secure
+    // context, so getUserMedia works, and plain-HTTP calls to the VM API are
+    // not blocked as mixed content (unlike an https://localhost origin).
+    androidScheme: "http",
     cleartext: true,
   },
   android: {

@@ -44,6 +44,13 @@ export async function pollReport(id: string): Promise<ReportStatus> {
   const loc = ext.location ?? {};
   const ppl = ext.people_affected ?? {};
   const ack = d.acknowledgement;
+  // The API returns a root-relative path, which inside the APK would resolve
+  // to the app's own localhost origin instead of the backend.
+  const ackAudio = ack?.audio_url
+    ? ack.audio_url.startsWith("http")
+      ? ack.audio_url
+      : `${BASE}${ack.audio_url}`
+    : null;
   return {
     id: d.id,
     status: d.status,
@@ -54,7 +61,7 @@ export async function pollReport(id: string): Promise<ReportStatus> {
     priority_label: d.priority_label ?? null,
     follow_up_needed: d.follow_up_needed ?? false,
     follow_up_questions: d.follow_up_questions ?? [],
-    acknowledgement: ack ? { text: ack.text, audio_url: ack.audio_url ?? null } : null,
+    acknowledgement: ack ? { text: ack.text, audio_url: ackAudio } : null,
     error: d.error ?? null,
   };
 }
