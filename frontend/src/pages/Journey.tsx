@@ -362,7 +362,7 @@ export function JourneyPage() {
   const navigate = useNavigate();
   const id = params.get("r");
   return id ? (
-    <Journey reportId={id} onReset={() => navigate("/")} onFollowUp={(newId) => setParams({ r: newId })} />
+    <Journey reportId={id} onReset={() => navigate("/call")} onFollowUp={(newId) => setParams({ r: newId })} />
   ) : (
     <Start onStarted={(rid) => setParams({ r: rid })} />
   );

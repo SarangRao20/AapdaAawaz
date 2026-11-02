@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
@@ -26,6 +26,14 @@ def _get(db: Session, report_id: str) -> models.Report:
     rep = db.get(models.Report, report_id)
     if rep is None:
         raise HTTPException(404, f"report {report_id} not found")
+    return rep
+
+
+def _get_for_caller(request: Request, db: Session, report_id: str) -> models.Report:
+    """For routes the public caller app uses. Telegram reports hold real voices and GPS, so they need a login."""
+    rep = _get(db, report_id)
+    if rep.source == "telegram" and not request.state.authenticated:
+        raise HTTPException(404, "report not found")
     return rep
 
 
@@ -134,8 +142,8 @@ async def attach_audio(report_id: str, file: UploadFile = File(...), process: bo
 
 
 @router.get("/{report_id}")
-def get_report(report_id: str, db: Session = Depends(get_db)):
-    return report_detail(db, _get(db, report_id))
+def get_report(report_id: str, request: Request, db: Session = Depends(get_db)):
+    return report_detail(db, _get_for_caller(request, db, report_id))
 
 
 @router.post("/{report_id}/process", status_code=202)
@@ -177,8 +185,8 @@ def get_audio(report_id: str, audio_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{report_id}/acknowledgement")
-def acknowledgement(report_id: str, synthesize: bool = Query(True), db: Session = Depends(get_db)):
-    rep = _get(db, report_id)
+def acknowledgement(report_id: str, request: Request, synthesize: bool = Query(True), db: Session = Depends(get_db)):
+    rep = _get_for_caller(request, db, report_id)
     with PIPELINE_LOCK:
         ack = db.scalars(select(models.Acknowledgement).where(models.Acknowledgement.report_id == rep.id)
                          .order_by(models.Acknowledgement.id.desc())).first()
@@ -191,7 +199,8 @@ def acknowledgement(report_id: str, synthesize: bool = Query(True), db: Session 
 
 
 @router.get("/{report_id}/acknowledgement/audio")
-def acknowledgement_audio(report_id: str, db: Session = Depends(get_db)):
+def acknowledgement_audio(report_id: str, request: Request, db: Session = Depends(get_db)):
+    _get_for_caller(request, db, report_id)
     ack = db.scalars(select(models.Acknowledgement).where(models.Acknowledgement.report_id == report_id,
                                                           models.Acknowledgement.audio_stored_name.is_not(None))
                      .order_by(models.Acknowledgement.id.desc())).first()

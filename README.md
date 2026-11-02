@@ -98,6 +98,20 @@ Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variab
 Runtime thresholds (confidence gate, dedup, priority labels, provider mode) are edited on the
 **Settings** page and stored in the database.
 
+### Dashboard login
+
+The landing page is at `/`, and the dashboard needs a login. Set a password in `.env`, then restart the backend:
+
+```
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=choose-a-long-password
+```
+
+With no password nobody can log in. Everything under `/api` needs a login except what the public caller app
+uses to send a report and hear the reply, and Telegram reports always need one. The MCP server signs in with
+`API_TOKEN` in `.env`, matched by `AAPDA_API_TOKEN` in its own config. Sessions last 12 hours. Set
+`COOKIE_SECURE=true` once the dashboard is served over HTTPS.
+
 ### Telegram bot
 
 People can report by voice note, text or GPS in Telegram, with no public URL needed.

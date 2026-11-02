@@ -5,7 +5,8 @@
       "command": "<run setup.sh to fill this>",
       "args": ["<run setup.sh to fill this>"],
       "env": {
-        "AAPDA_API_URL": "http://localhost:8000"
+        "AAPDA_API_URL": "http://localhost:8000",
+        "AAPDA_API_TOKEN": "<same value as API_TOKEN in the backend .env>"
       }
     }
   }

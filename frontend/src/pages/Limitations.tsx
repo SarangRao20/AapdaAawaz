@@ -4,7 +4,7 @@ export function LimitationsPage() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
-        <Link to="/" className="text-blue-600 hover:underline">
+        <Link to="/live" className="text-blue-600 hover:underline">
           ← Back to Command Center
         </Link>
       </div>
@@ -114,7 +114,7 @@ export function LimitationsPage() {
           <ul className="bg-white rounded-lg border p-4 space-y-2 text-sm">
             <li className="flex items-start">
               <span className="text-red-500 mr-2">•</span>
-              <span><strong>No authentication:</strong> Local use only. Reviewer name is free text.</span>
+              <span><strong>One shared login:</strong> One admin account with no roles. Reviewer name is free text.</span>
             </li>
             <li className="flex items-start">
               <span className="text-red-500 mr-2">•</span>
@@ -159,7 +159,7 @@ export function LimitationsPage() {
               </li>
               <li className="flex items-start">
                 <span className="mr-2">→</span>
-                <span>Authentication, RBAC, audit log signing</span>
+                <span>Individual accounts, RBAC, audit log signing</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">→</span>

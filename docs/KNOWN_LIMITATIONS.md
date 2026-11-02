@@ -67,7 +67,12 @@
 
 ## System
 
-* No authentication or authorisation; reviewer name is free text. Local use only.
+* **One shared admin login, no roles.** The account comes from `.env`, the reviewer name is still free
+  text, and failed logins are counted in memory (a restart clears the count, and one counter covers
+  everyone, so someone guessing can briefly lock the real admin out).
+* **The caller app's routes are public.** Anyone can submit a report, which can spend provider credits, and
+  anyone who has a report ID can read that report unless it came from Telegram. There is no rate limit.
+* Use HTTPS and `COOKIE_SECURE=true` before exposing the dashboard beyond your own machine.
 * Single-process worker thread and SQLite: fine for a demo, not for concurrent multi-user load.
 * Polling (2–4 s) rather than push updates.
 * Schema is created with `create_all`; there are no migration scripts yet (schema version 1).
