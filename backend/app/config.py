@@ -101,9 +101,19 @@ class Settings:
     api_token: str = field(repr=False)
     cookie_secure: bool
 
+    # Twilio Telephony (PSTN emergency voice call intake)
+    twilio_account_sid: str = field(repr=False)  # TWILIO_ACCOUNT_SID
+    twilio_auth_token: str = field(repr=False)   # TWILIO_AUTH_TOKEN
+    twilio_phone_number: str                     # TWILIO_PHONE_NUMBER
+
     @property
     def gnani_key_configured(self) -> bool:
         return bool(self.gnani_api_key)
+
+    @property
+    def twilio_configured(self) -> bool:
+        return bool(self.twilio_account_sid and self.twilio_auth_token)
+
 
 # Dashboard dev server, caller-app dev server, and the caller APK's WebView (http://localhost).
 DEFAULT_CORS_ORIGINS = (
@@ -169,6 +179,9 @@ def load_settings() -> Settings:
         session_secret=_env("SESSION_SECRET"),
         api_token=_env("API_TOKEN"),
         cookie_secure=_env_bool("COOKIE_SECURE", False),
+        twilio_account_sid=_env("TWILIO_ACCOUNT_SID"),
+        twilio_auth_token=_env("TWILIO_AUTH_TOKEN"),
+        twilio_phone_number=_env("TWILIO_PHONE_NUMBER", "+17372508034"),
     )
 
 

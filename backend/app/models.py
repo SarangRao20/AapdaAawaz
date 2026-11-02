@@ -76,6 +76,9 @@ class Report(Base):
     caller_longitude: Mapped[float | None] = mapped_column(Float)
     caller_location_accuracy_m: Mapped[float | None] = mapped_column(Float)
 
+    # Telephony caller phone number (e.g. Twilio PSTN caller)
+    caller_phone: Mapped[str | None] = mapped_column(String(40))
+
     audio_files: Mapped[list["AudioFile"]] = relationship(back_populates="report", cascade="all, delete-orphan")
     jobs: Mapped[list["ProcessingJob"]] = relationship(back_populates="report", cascade="all, delete-orphan",
                                                        order_by="ProcessingJob.id")

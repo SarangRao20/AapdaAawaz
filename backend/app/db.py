@@ -34,7 +34,7 @@ class Base(DeclarativeBase):
     pass
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # Columns added after initial schema — applied as idempotent ALTER TABLE statements
 _MIGRATIONS: list[str] = [
@@ -47,6 +47,8 @@ _MIGRATIONS: list[str] = [
     "ALTER TABLE reports ADD COLUMN caller_latitude FLOAT",
     "ALTER TABLE reports ADD COLUMN caller_longitude FLOAT",
     "ALTER TABLE reports ADD COLUMN caller_location_accuracy_m FLOAT",
+    # v4: caller phone for Twilio/telephony intake
+    "ALTER TABLE reports ADD COLUMN caller_phone VARCHAR(40)",
 ]
 
 
