@@ -261,11 +261,12 @@ function IncidentDetailPage({ id }: { id: string }) {
                       <Badge title={r.link_score != null ? `match score ${r.link_score}` : undefined}>{label(r.link_outcome)}</Badge>
                       <ModeBadge mode={r.transcript_provider_mode} provider={r.transcript_provider} />
                       {r.priority_label && <PriorityBadge value={r.priority_label} />}
+                      {r.source === "telegram" && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">{label(r.source)}</Badge>}
                       <span className="w-full truncate text-xs text-ink-2 group-open:hidden">"{r.transcript}"</span>
                     </summary>
                     <div className="mt-3 space-y-3">
                       {r.audio[0] && <audio controls preload="none" src={r.audio[0].url} className="h-8 w-full" />}
-                      <blockquote className="rounded-md border border-line bg-surface-2 px-3 py-2 text-sm text-ink" lang={r.language ?? undefined}>
+                      <blockquote className="whitespace-pre-line rounded-md border border-line bg-surface-2 px-3 py-2 text-sm text-ink" lang={r.language ?? undefined}>
                         {r.transcript}
                       </blockquote>
                       {r.extraction_current && <ExtractionView ext={r.extraction_current} assessment={r.field_assessment} />}

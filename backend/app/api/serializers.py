@@ -88,6 +88,9 @@ def report_summary(rep: models.Report, incident_id: str | None = None, pending: 
         "dedup_outcome": rep.dedup_outcome,
         "incident_id": incident_id,
         "pending_suggestions": pending,
+        "caller_location": ({"latitude": rep.caller_latitude, "longitude": rep.caller_longitude,
+                             "accuracy_m": rep.caller_location_accuracy_m}
+                            if rep.caller_latitude is not None else None),
         "processing_ms": rep.processing_ms,
         "processed_at": iso(rep.processed_at),
         "error": rep.error or rep.stt_error,
@@ -106,6 +109,8 @@ def report_detail(db: Session, rep: models.Report) -> dict:
                                                      models.AuditLog.entity_id == rep.id)
                        .order_by(models.AuditLog.id)).all()
     gt = db.get(models.GroundTruth, rep.fixture_id) if rep.fixture_id else None
+    conv = db.scalars(select(models.TelegramConversation).where(models.TelegramConversation.report_id == rep.id)
+                      .order_by(models.TelegramConversation.id.desc())).first()
     out = report_summary(rep, active, sum(1 for s in suggestions if s.status == "pending"))
     out.update({
         "transcript_raw": rep.transcript_raw,
@@ -123,6 +128,10 @@ def report_detail(db: Session, rep: models.Report) -> dict:
         "follow_up_questions": rep.follow_up_questions or [],
         "follow_up_missing_fields": rep.follow_up_missing_fields or [],
         "follow_up_status": rep.follow_up_status,
+        # The chat id stays out: a dispatcher needs the state of the conversation, not the caller's identity.
+        "telegram": ({"state": conv.state, "pending_field": conv.pending_field, "attempts": conv.attempts,
+                      "skipped_fields": conv.skipped_fields or [], "next_followup_at": iso(conv.next_followup_at),
+                      "updated_at": iso(conv.updated_at)} if conv else None),
         "jobs": [job_view(j) for j in rep.jobs],
         "links": [{"incident_id": l.incident_id, "outcome": l.outcome, "score": l.score, "active": l.active,
                    "actor": l.actor, "created_at": iso(l.created_at), "deactivated_at": iso(l.deactivated_at)}

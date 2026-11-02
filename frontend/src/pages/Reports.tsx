@@ -26,8 +26,13 @@ export function Reports() {
   const [params, setParams] = useSearchParams();
   const selected = params.get("id");
   const [status, setStatus] = useState("");
+  const [source, setSource] = useState("");
   const [q, setQ] = useState("");
-  const list = usePoll(() => api.reports({ limit: 100, status: status || undefined, q: q || undefined }), 2500, [status, q]);
+  const list = usePoll(
+    () => api.reports({ limit: 100, status: status || undefined, source: source || undefined, q: q || undefined }),
+    2500,
+    [status, source, q],
+  );
   const detail = usePoll(() => (selected ? api.report(selected) : Promise.resolve(null)), selected ? 2000 : 0, [selected]);
 
   const [lang, setLang] = useState("");
@@ -125,6 +130,14 @@ export function Reports() {
                 <option value="processed">Processed</option>
                 <option value="needs_transcript">Needs transcript</option>
                 <option value="failed">Failed</option>
+              </Select>
+              <Select className="h-8 w-32 text-xs" value={source} onChange={(e) => setSource(e.target.value)} aria-label="Source filter">
+                <option value="">All sources</option>
+                <option value="telegram">Telegram</option>
+                <option value="recording">Recording</option>
+                <option value="upload">Upload</option>
+                <option value="manual_text">Typed</option>
+                <option value="synthetic_fixture">Synthetic</option>
               </Select>
             </div>
             {list.error && <div className="p-3"><ErrorBanner offline message={list.error} /></div>}

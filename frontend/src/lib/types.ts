@@ -161,9 +161,19 @@ export interface ReportSummary {
   dedup_outcome: string | null;
   incident_id: string | null;
   pending_suggestions: number;
+  caller_location: { latitude: number; longitude: number; accuracy_m: number | null } | null;
   processing_ms: number | null;
   processed_at: string | null;
   error: string | null;
+}
+
+export interface TelegramConversationState {
+  state: "new" | "needs_text" | "collecting" | "complete" | "incomplete";
+  pending_field: string | null;
+  attempts: number;
+  skipped_fields: string[];
+  next_followup_at: string | null;
+  updated_at: string | null;
 }
 
 export interface Suggestion {
@@ -218,7 +228,8 @@ export interface ReportDetail extends ReportSummary {
   follow_up_needed: boolean;
   follow_up_questions: string[];
   follow_up_missing_fields: string[];
-  follow_up_status: "none" | "pending" | "answered";
+  follow_up_status: "none" | "pending" | "answered" | "unanswered";
+  telegram: TelegramConversationState | null;
   jobs: Job[];
   links: { incident_id: string; outcome: string; score: number | null; active: boolean; actor: string; created_at: string; deactivated_at: string | null }[];
   suggestions: Suggestion[];

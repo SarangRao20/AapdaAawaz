@@ -408,3 +408,33 @@ def test_demo_reset_clears_conversations(rig, client):
     say(rig, "Flood in Nandwadi, 25 people are stuck")
     assert client.post("/api/demo/reset", json={}).status_code == 200
     assert conversation(rig[2]) is None
+
+
+def test_dashboard_api_shows_the_record_being_collected_without_the_chat_id(rig, client):
+    _, _, db = rig
+    say(rig, "Please help us, water is rising fast and people are trapped")
+    report = report_of(db)
+
+    listed = client.get("/api/reports", params={"source": "telegram"}).json()
+    assert [r["id"] for r in listed["items"]] == [report.id]
+    assert client.get("/api/reports", params={"source": "upload"}).json()["items"] == []
+
+    detail = client.get(f"/api/reports/{report.id}").json()
+    assert detail["source"] == "telegram"
+    assert detail["telegram"]["state"] == "collecting"
+    assert detail["telegram"]["pending_field"] == "location_missing"
+    assert "chat_id" not in detail["telegram"]
+    assert detail["caller_location"] is None
+
+
+def test_dashboard_api_returns_shared_coordinates(rig, client):
+    bot, _, db = rig
+    say(rig, "Please help us, water is rising fast and people are trapped")
+    bot.handle_update(db, message(location={"latitude": 18.5, "longitude": 73.8, "horizontal_accuracy": 20.0}))
+    detail = client.get(f"/api/reports/{report_of(db).id}").json()
+    assert detail["caller_location"] == {"latitude": 18.5, "longitude": 73.8, "accuracy_m": 20.0}
+
+
+def test_reports_outside_telegram_have_no_conversation(client):
+    created = client.post("/api/reports", json={"transcript": "Flood in Nandwadi", "process": False}).json()
+    assert created["telegram"] is None and created["caller_location"] is None

@@ -5,6 +5,8 @@ import tempfile
 # Must be set before the app is imported (config is read at import time).
 os.environ["AAPDA_VAR_DIR"] = tempfile.mkdtemp(prefix="aapda-test-")
 os.environ["GNANI_API_KEY"] = ""
+# A real token in .env must never make the test app poll the real bot and take its messages.
+os.environ["TELEGRAM_BOT_TOKEN"] = ""
 os.environ["STT_PROVIDER"] = "mock"
 os.environ["TTS_PROVIDER"] = "none"
 os.environ["LOG_LEVEL"] = "WARNING"
