@@ -18,8 +18,11 @@ from tests.conftest import wait_for
 
 # ---- Timbre ----------------------------------------------------------------------------
 def test_default_timbre_model_matches_the_default_voices(monkeypatch):
-    monkeypatch.delenv("TIMBRE_MODEL", raising=False)
-    assert config.load_settings().timbre_model == "timbre-v2.5"
+    for name in ("TIMBRE_MODEL", "TIMBRE_VOICE_MR", "TIMBRE_VOICE_HI", "TIMBRE_VOICE_EN", "TIMBRE_VOICE_MIXED"):
+        monkeypatch.delenv(name, raising=False)
+    loaded = config.load_settings()
+    assert loaded.timbre_model == "timbre-v3.0"
+    assert set(loaded.timbre_voices.values()) == {"Shivani"}
 
 
 def test_timbre_400_error_message_reaches_the_user():

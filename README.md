@@ -89,7 +89,7 @@ Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variab
 | `EVON_BASE_URL` | `https://api.vachana.ai/v1` | Evon LLM endpoint (OpenAI-compatible) |
 | `EVON_MODEL` | `evon-v3.3` | Evon model name |
 | `EVON_TIMEOUT_S` / `EVON_MAX_RETRIES` | `60` / `2` | Timeout and retries for Evon calls |
-| `TIMBRE_MODEL`, `TIMBRE_VOICE_*` | `timbre-v2.5`, Ishaan/Nalini/Kaveri/Poorvi | Voice per language; these voices exist only on v2.5 |
+| `TIMBRE_MODEL`, `TIMBRE_VOICE_*` | `timbre-v3.0`, `Shivani` | Voice per language (all v3.0 voices are multilingual). Model and voices must match: v2.5 voice names only work on `timbre-v2.5` |
 | `AAPDA_VAR_DIR` | `backend/var` | SQLite DB, uploads, generated audio |
 | `DATABASE_URL` | `sqlite:///<var>/aapda.db` | |
 | `CORS_ORIGINS` | dashboard (`:5173`), caller app (`:5174`), caller APK (`http://localhost`) | Explicit list, no wildcard |

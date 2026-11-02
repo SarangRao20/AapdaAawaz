@@ -359,7 +359,8 @@ def process_report(db: Session, report_id: str) -> models.Report | None:
                  decision.outcome, inc.id, decision.considered)
 
         # 5. agentic follow-up — detect missing fields, generate targeted questions via Evon
-        lang = ext.get("language", "hi") or "hi"
+        _raw_lang = ext.get("language") or report.language_hint or "hi"
+        lang = _raw_lang if _raw_lang in ("hi", "mr", "en", "mixed") else "hi"
         if needs_followup(ext):
             with stage(db, report, "follow_up") as fu_job:
                 missing = missing_fields(ext)
