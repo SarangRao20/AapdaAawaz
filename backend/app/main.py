@@ -17,19 +17,25 @@ from fastapi.staticfiles import StaticFiles
 from .api import incidents, reports, system
 from .config import settings
 from .db import init_db
+from .services.telegram_bot import telegram_runner
 from .services.worker import worker
 
 logging.basicConfig(level=settings.log_level,
                     format='{"t":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","msg":"%(message)s"}')
 log = logging.getLogger("aapda")
+# httpx logs full request URLs at INFO, and Telegram URLs contain the bot token.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
     worker.start()
+    telegram_runner.start()
     log.info("started; gnani key configured=%s", settings.gnani_key_configured)
     yield
+    telegram_runner.stop()
     worker.stop()
 
 

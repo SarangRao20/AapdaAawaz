@@ -22,8 +22,8 @@ export function applyFilters(items: Incident[], f: Filters): Incident[] {
     if (f.disaster && i.disaster_type !== f.disaster) return false;
     if (f.language && !i.languages.includes(f.language)) return false;
     if (f.verification === "verified" && i.location_status !== "human_verified") return false;
-    if (f.verification === "reference" && i.location_status !== "simulated_reference") return false;
-    if (f.verification === "ungrounded" && ["human_verified", "simulated_reference"].includes(i.location_status)) return false;
+    if (f.verification === "reference" && !["simulated_reference", "caller_gps"].includes(i.location_status)) return false;
+    if (f.verification === "ungrounded" && ["human_verified", "simulated_reference", "caller_gps"].includes(i.location_status)) return false;
     return true;
   });
 }

@@ -34,7 +34,7 @@ class Base(DeclarativeBase):
     pass
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Columns added after initial schema — applied as idempotent ALTER TABLE statements
 _MIGRATIONS: list[str] = [
@@ -43,6 +43,10 @@ _MIGRATIONS: list[str] = [
     "ALTER TABLE reports ADD COLUMN follow_up_questions JSON",
     "ALTER TABLE reports ADD COLUMN follow_up_missing_fields JSON",
     "ALTER TABLE reports ADD COLUMN follow_up_status VARCHAR(20) NOT NULL DEFAULT 'none'",
+    # v3: real coordinates shared by a caller
+    "ALTER TABLE reports ADD COLUMN caller_latitude FLOAT",
+    "ALTER TABLE reports ADD COLUMN caller_longitude FLOAT",
+    "ALTER TABLE reports ADD COLUMN caller_location_accuracy_m FLOAT",
 ]
 
 

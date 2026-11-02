@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, GitMerge, MapPin, Pause, Play, Scissors, Sparkles, Volume2, Zap } from "lucide-react";
-import { useRef, useMemo, useState } from "react";
+import { Suspense, lazy, useRef, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ConfidenceBadge, LocationBadge, ModeBadge, PriorityBadge, ReviewBadge } from "../components/badges";
 import { ExtractionView } from "../components/ExtractionView";
@@ -11,9 +11,11 @@ import { MatchEvidenceTable, SuggestionCard } from "../components/SuggestionCard
 import { Badge, Button, Card, CardHeader, Empty, ErrorBanner, Input, KV, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { getReviewer } from "../lib/reviewer";
-import { clock, label, langLabel, locationText, peopleText, sortIncidents } from "../lib/format";
+import { clock, isMappable, label, langLabel, locationText, peopleText, sortIncidents } from "../lib/format";
 import type { Acknowledgement, IncidentDetail, MatchEvidence } from "../lib/types";
 import { usePoll } from "../lib/usePoll";
+
+const SiteView3D = lazy(() => import("../components/SiteView3D"));
 
 function AckPanel({ reportId, initial }: { reportId: string; initial: Acknowledgement | null }) {
   const el = useRef<HTMLAudioElement>(null);
@@ -185,6 +187,8 @@ function IncidentDetailPage({ id }: { id: string }) {
                   <div className="text-2xs text-ink-3">
                     {i.location_status === "human_verified"
                       ? `Verified by ${i.location?.verified_by ?? "a dispatcher"}`
+                      : i.location_status === "caller_gps"
+                        ? "GPS shared by the caller; confirm it is the incident site"
                       : i.location_status === "simulated_reference"
                         ? i.location?.place_id?.startsWith("C")
                           ? "City-centre coordinates — exact incident location within city unknown"
@@ -334,6 +338,13 @@ function IncidentDetailPage({ id }: { id: string }) {
         </div>
 
         <div className="space-y-4">
+          {isMappable(i) && (
+            <Card className="overflow-hidden">
+              <Suspense fallback={<div className="h-[380px]" />}>
+                <SiteView3D incident={i} className="h-[380px]" compact />
+              </Suspense>
+            </Card>
+          )}
           {i.latitude != null && (
             <IncidentMap className="h-[260px]" compactLegend incidents={[i]} places={gaz.data?.places ?? []} selectedId={i.id} />
           )}

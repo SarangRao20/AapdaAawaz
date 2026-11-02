@@ -4,6 +4,7 @@ export type Priority = "critical" | "high" | "medium" | "low";
 export type ReviewStatus = "needs_review" | "reviewed" | "rereview_needed" | "no_review_required";
 export type LocationStatus =
   | "human_verified"
+  | "caller_gps"
   | "simulated_reference"
   | "caller_stated_unmapped"
   | "ambiguous"
@@ -239,6 +240,7 @@ export interface IncidentLocation {
   coordinate_source: string | null;
   stated_text: string[];
   verified_by?: string;
+  gps_accuracy_m?: number | null;
 }
 
 export interface Incident {
@@ -383,7 +385,7 @@ export interface RuntimeConfig {
     coords_near_km: number;
     coords_far_km: number;
   };
-  priority: { weights: Record<string, number>; thresholds: Record<string, number>; safe_status_cap: string };
+  priority: { weights: Record<string, number>; thresholds: Record<string, number>; unclear_floor: string; safe_status_cap: string };
   providers: { stt: string; tts: string };
 }
 

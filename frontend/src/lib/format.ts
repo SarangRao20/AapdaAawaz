@@ -43,6 +43,7 @@ export const LABELS: Record<string, string> = {
   mixed: "Hinglish / mixed",
   unknown: "Unknown",
   human_verified: "Verified by dispatcher",
+  caller_gps: "GPS shared by caller (unverified)",
   simulated_reference: "Reference match (simulated, unverified)",
   caller_stated_unmapped: "Caller-stated, not in reference",
   ambiguous: "Ambiguous / conflicting",
@@ -106,6 +107,7 @@ export function locationText(i: Incident): string {
   const loc = i.location;
   if (!loc) return "Unknown location";
   if (loc.place_name) return loc.landmark ? `${loc.place_name} · ${loc.landmark}` : loc.place_name;
+  if (i.location_status === "caller_gps") return "GPS position shared by the caller";
   if (loc.landmark) return `Near “${loc.landmark}” (village unclear)`;
   if (loc.candidates?.length) return `Location unclear (${loc.candidates.length} possible places)`;
   return "Unknown location";
@@ -114,7 +116,7 @@ export function locationText(i: Incident): string {
 /** Grounded = has coordinates from the simulated reference or a dispatcher; only these are mapped. */
 export function isMappable(i: Incident): boolean {
   return i.latitude !== null && i.longitude !== null &&
-    (i.location_status === "simulated_reference" || i.location_status === "human_verified");
+    (i.location_status === "simulated_reference" || i.location_status === "human_verified" || i.location_status === "caller_gps");
 }
 
 export function sortIncidents(items: Incident[]): Incident[] {

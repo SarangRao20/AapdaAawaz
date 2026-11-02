@@ -282,6 +282,9 @@ def process_report(db: Session, report_id: str) -> models.Report | None:
                     "evon_attempted": settings.extraction_provider == "evon",
                 }
 
+        if report.caller_latitude is not None:
+            ext["caller_gps"] = {"latitude": report.caller_latitude, "longitude": report.caller_longitude,
+                                 "accuracy_m": report.caller_location_accuracy_m}
         if report.extraction_original is None:
             report.extraction_original = ext
         report.extraction_current = ext

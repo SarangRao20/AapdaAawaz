@@ -75,8 +75,11 @@ class TimbreTTS:
                                             mode=self.mode, voice=voice, language_code=lang_code)
                     msg = ""
                     try:
-                        err_body = resp.json().get("error", {})
-                        msg = f"{err_body.get('type', '')}: {err_body.get('message', '')}"
+                        body = resp.json()
+                        detail = body.get("error") or body.get("message") or body.get("detail") or ""
+                        if isinstance(detail, dict):
+                            detail = ": ".join(str(detail[k]) for k in ("type", "message") if detail.get(k))
+                        msg = str(detail)[:300]
                     except (ValueError, AttributeError):
                         pass
                     err = ProviderError(

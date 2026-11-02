@@ -44,6 +44,12 @@ export function LocationBadge({ value }: { value: LocationStatus }) {
         <BadgeCheck className="h-3 w-3" aria-hidden /> Verified location
       </Badge>
     );
+  if (value === "caller_gps")
+    return (
+      <Badge className="border-[#1f4a2a] text-[#9fe0a8]" title="Real GPS position the caller shared. Confirm it is the incident site.">
+        <MapPin className="h-3 w-3" aria-hidden /> Caller GPS · unverified
+      </Badge>
+    );
   if (value === "simulated_reference")
     return (
       <Badge title="Matched to a SIMULATED reference village; the point is the village reference, not the exact spot. Not verified.">

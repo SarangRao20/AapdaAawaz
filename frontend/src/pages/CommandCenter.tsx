@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronDown, Clock, Globe2, Map as MapIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Box, ChevronDown, Clock, Globe2, Map as MapIcon } from "lucide-react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AttentionList } from "../components/AttentionList";
 import { DemoControls } from "../components/DemoControls";
@@ -13,13 +13,15 @@ import { useIncidentAlerts } from "../lib/alerts";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
 import { useI18n } from "../lib/i18n";
-import { PRIORITY_COLOR, sortIncidents, timeAgo } from "../lib/format";
+import { PRIORITY_COLOR, isMappable, sortIncidents, timeAgo } from "../lib/format";
 import { Reveal, Stagger } from "../lib/motion";
 import { usePoll } from "../lib/usePoll";
 import type { Incident } from "../lib/types";
 
 const POLL_MS = 2500;
-type View = "globe" | "map" | "timeline";
+type View = "globe" | "map" | "site" | "timeline";
+
+const SiteView3D = lazy(() => import("../components/SiteView3D"));
 
 const PRIORITY_FILTERS = ["critical", "high", "medium", "low"] as const;
 
@@ -134,6 +136,7 @@ export function CommandCenter() {
               [
                 ["globe", "Globe", Globe2],
                 ["map", "Map", MapIcon],
+                ["site", "3D Site", Box],
                 ["timeline", "Timeline", Clock],
               ] as const
             ).map(([key, text, Icon]) => (
@@ -181,6 +184,10 @@ export function CommandCenter() {
           <div className="relative h-[560px] md:h-[640px]">
             {view === "globe" ? (
               <Globe className="h-full w-full" incidents={filtered} selectedId={selected} onSelect={setSelected} onOpenMap={() => setView("map")} />
+            ) : view === "site" ? (
+              <Suspense fallback={<div className="h-full" />}>
+                <SiteView3D className="h-full" incident={filtered.find((x) => x.id === selected) ?? filtered.find(isMappable) ?? null} />
+              </Suspense>
             ) : view === "map" ? (
               <IncidentMap className="!rounded-none !border-0 h-full" incidents={filtered} places={gaz.data?.places ?? []} selectedId={selected} onSelect={setSelected} compactLegend />
             ) : (
