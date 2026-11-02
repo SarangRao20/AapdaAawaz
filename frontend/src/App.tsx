@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mic,
+  PhoneCall,
   Moon,
   Search,
   Settings as SettingsIcon,
@@ -29,6 +30,7 @@ import { AlertToasts } from "./components/AlertToasts";
 import { CommandCenter } from "./pages/CommandCenter";
 import { JourneyPage } from "./pages/Journey";
 import { Landing } from "./pages/Landing";
+import { LiveCall } from "./pages/LiveCall";
 import { Login } from "./pages/Login";
 import { Evaluation } from "./pages/Evaluation";
 import { IncidentInvestigation } from "./pages/IncidentInvestigation";
@@ -101,6 +103,7 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
 }
 
 const NAV = [
+  { to: "/awaaz", label: "Awaaz Live", hint: "Talk to the assistant, live, through Gnani Prisma and Timbre", icon: PhoneCall },
   { to: "/call", label: "New Call", hint: "Record a voice report and process it", icon: Mic, end: true },
   { to: "/live", label: "Situation Room", hint: "Live map, alerts and active incidents", icon: LayoutDashboard },
   { to: "/reports", label: "Reports", hint: "Every report received, including Telegram", icon: Inbox },
@@ -519,6 +522,7 @@ function DashboardShell({ dark, toggleTheme }: { dark: boolean; toggleTheme: () 
             <>
               <motion.div key={section} variants={pageVariants} initial="initial" animate="enter">
                 <Routes location={location}>
+                  <Route path="/awaaz" element={<LiveCall />} />
                   <Route path="/call" element={<JourneyPage />} />
                   <Route path="/live" element={<CommandCenter />} />
                   <Route path="/reports" element={<Reports />} />

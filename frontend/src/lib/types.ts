@@ -486,3 +486,20 @@ export interface EvaluationSplit {
     latency_ms: { mean: number | null; p95: number | null; note: string };
   };
 }
+
+export interface LiveCallSummary {
+  id: string;
+  language: string;
+  state: string;
+  started_at: number;
+  ended_at: number | null;
+  turns: { speaker: "caller" | "assistant"; text: string; at: number }[];
+  facts: { place: string | null; disaster: string | null; people: number | null; priority: string | null; score: number | null; report_id: string | null; needs_review: boolean };
+  asking_for: string | null;
+  last_response_ms: number | null;
+}
+
+export interface VoiceAlertOptions {
+  templates: { id: string; label: string; text: Record<string, string> }[];
+  recipients: { total: number; languages: Record<string, number> };
+}

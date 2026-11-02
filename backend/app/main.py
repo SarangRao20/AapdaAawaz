@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import auth as auth_rules
-from .api import auth, incidents, reports, system
+from .api import auth, incidents, live, reports, system
 from .config import settings
 from .db import init_db
 from .services.telegram_bot import telegram_runner
@@ -79,6 +79,7 @@ async def validation_handler(_req: Request, exc: RequestValidationError):
 
 
 app.include_router(auth.router)
+app.include_router(live.router)
 app.include_router(system.router)
 app.include_router(reports.router)
 app.include_router(incidents.router)

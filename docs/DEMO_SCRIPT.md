@@ -1,29 +1,51 @@
 # 60-second demo script
 
-**Before you start:** backend and frontend running (README → Quick start), browser at
-http://127.0.0.1:5173, Command Center open. Press **Reset** (click it twice — the first click asks
-for confirmation) so the database is empty. Every number you will show comes from the live database
-after the steps below; nothing is hard-coded.
+The story of this video is Gnani's voice. Keep the conversation on screen for as long as possible, and let
+people hear both sides of it.
 
-| Time | Do | Say |
+**The contest allows synthetic data only.** Speak the scripted lines below, and don't show a real phone
+number, a real location or a real report. Check the contest terms on whether your own acted voice is allowed.
+
+## Before recording
+
+1. Run the backend and dashboard (README, Quick start), then log in.
+2. Open two browser windows side by side:
+   * **Left, the caller:** Awaaz Live (`/awaaz`), language set to Hinglish.
+   * **Right, the dispatcher:** Situation Room (`/live`).
+3. Use speakers rather than headphones, so the recording picks up both voices.
+4. To start from an empty screen, press **Reset** twice. **This deletes every report in that database**, so use
+   a separate copy (`AAPDA_VAR_DIR`, see the README) if you have reports you want to keep.
+
+## The script
+
+| Time | Do | Say or show |
 |---|---|---|
-| **0–10 s — the call arrives** | Click **1 · Incoming call**. In the *Live incoming reports* panel `R-SYN-001` appears, already processed. Click its ID; press play on the audio; show *Processing stages*. | "A synthetic Hinglish call from a flooded village. Two Gnani models ran in sequence: **Prisma v2.5** transcribed the audio from speech to text, and **Timbre v2.5** synthesised the spoken acknowledgement the caller would hear back — in their own language. Both tested live with the contest API." |
-| **10–20 s — structured extraction** | Scroll to *Structured extraction*. Point at the extracted fields (place, people count, vulnerable groups, needs, urgency) and the *Uncertainties* section. | "The rule-based extractor read the transcript and pulled out structured fields: Nandwadi, about 25 people, elderly and children, trapped on a roof, water rising, boat needed. Any field it's not sure about appears in Uncertainties — not a confident wrong answer. The system also includes a full Evon v3.3 LLM adapter for self-hosted deployment, but Evon is Hugging Face open weights only — not available via API for this contest." |
-| **20–35 s — the map** | Back to Command Center, click **2 · Load all synthetic reports**. KPIs jump to 40 reports → **22 candidate incidents**, 18 duplicates linked, 7 possible duplicates pending. | "Forty reports in Marathi, Hindi, Hinglish and English. Deterministic matching on place, landmark, hazard, facts and time groups them into 22 candidate incidents. Contradictory or noisy reports are *not* merged automatically — they wait for a human." |
-| **35–45 s — prioritisation** | Scroll to the *Prioritized incident queue*; point at the top critical incident (e.g. Kothale temple: pregnant woman in labour, house surrounded by water). | "The queue is ordered by an explainable score: explicit threat to life +55, medical emergency +45, and so on. Severity is separate from information confidence, and the score never decides rescue order — a dispatcher does." |
-| **45–55 s — responsible AI** | Click **3 · Ambiguous-location case**. Show "Ambiguous / conflicting", "Info confidence: low", the review flags, and that it is **not on the map**. In *Human verification* choose *Karanjkhed (P08)*, add a note, **Save review**. | "The caller only said 'the big bridge'. Three villages have one, so we refuse to guess a coordinate — but it stays *critical*. After a call-back the dispatcher verifies it: it now appears on the map with a solid ring, and the audit trail keeps the original extraction output." |
-| **55–60 s — impact** | Back to Command Center; read the *Impact summary* line at the bottom. | "40 synthetic reports, 22 candidate incidents, 18 duplicates linked — every uncertain case routed to a human. Fully offline on a laptop, with Prisma and Timbre working live via the Gnani API." |
+| **0–5 s** | Show the landing page, then cut to the call screen. | Voiceover: "In a flood, the phone lines fill up. Aapda Awaaz still answers, in your language, using Gnani's voice AI." |
+| **5–30 s** | Press **Start call** and speak the lines below. | Let the conversation play with no voiceover. It's the whole point. |
+| **30–40 s** | Bring the dispatcher window forward. | "While that happens, a dispatcher watches the report fill in live, already ranked, with no typing." |
+| **40–48 s** | Open the incident and press **Hear it** in Voice alert, in two languages. | "Then a dispatcher can speak back: fixed safety messages, in each person's language, using Gnani Timbre." |
+| **48–55 s** | Show the results table in `docs/STT_BENCHMARK.md`. | State the village result and the noise result. Read the numbers from the table, and don't round them up. |
+| **55–60 s** | Back to the call screen. | "Gnani Prisma listens. Gnani Timbre speaks. A person always decides." |
 
-### Exact numbers you should see (default settings, fresh reset)
+### Lines to speak (Hinglish)
 
-After step 2: **40** reports · **22** incidents · **18** duplicates linked · **7** possible duplicates
-pending · **13** critical incidents · **10** critical awaiting review · **21** reports needing
-verification. After verifying the ambiguous case, *critical awaiting review* drops to **9**.
+The assistant asks only for what's missing, so wait for each question:
 
-If you changed thresholds on the Settings page, the numbers will differ — that is expected.
+1. "Yahan baadh aa gayi hai, paani bahut tezi se badh raha hai, log phanse hue hain."
+2. *(it asks where)* "Main Nandwadi gaon se bol raha hoon."
+3. *(it asks how many)* "Pachees log hain."
 
-### Backup paths
+It then reads the place, the event and the head count back to you, and tells you to call 112.
 
-* No internet: the map shows a "tiles could not load" banner; markers still render on a blank map.
-* No microphone: use the demo buttons or type a transcript on *Incoming Reports*.
-* To re-run: **Reset** (two clicks) and start again — the result is deterministic.
+### If you have time for a second take
+
+Run the call in Marathi or Hindi too and cut between them. Showing several languages on the same screen is
+what the Main Character and Mixed Vibes awards look for.
+
+## If something goes wrong
+
+* **Nothing happens when you speak:** check the browser allowed the microphone, then press **I've finished speaking**.
+* **A word is misheard:** that's real, so keep going. The assistant asks again if the answer didn't fill the field.
+* **No internet or no credits:** a live call needs Gnani, so it can't run. Use **1 · Incoming call** and **2 · Load
+  sample reports** on the Situation Room instead, which give 40 reports, 22 incidents, 18 duplicates linked,
+  7 possible duplicates, 13 critical incidents and 22 reports needing verification on a fresh reset.

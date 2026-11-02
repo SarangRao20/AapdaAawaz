@@ -9,11 +9,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: { "/api": { target: apiTarget, changeOrigin: true }, "/tiles": { target: apiTarget, changeOrigin: true } },
+    proxy: { "/api": { target: apiTarget, changeOrigin: true, ws: true }, "/tiles": { target: apiTarget, changeOrigin: true } },
   },
   preview: {
     port: 4173,
-    proxy: { "/api": { target: apiTarget, changeOrigin: true }, "/tiles": { target: apiTarget, changeOrigin: true } },
+    proxy: { "/api": { target: apiTarget, changeOrigin: true, ws: true }, "/tiles": { target: apiTarget, changeOrigin: true } },
   },
   build: {
     rollupOptions: {

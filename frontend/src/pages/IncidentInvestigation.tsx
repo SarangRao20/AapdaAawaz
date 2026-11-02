@@ -12,6 +12,7 @@ import { Badge, Button, Card, CardHeader, Empty, ErrorBanner, Input, KV, Spinner
 import { api } from "../lib/api";
 import { getReviewer } from "../lib/reviewer";
 import { clock, isMappable, label, langLabel, locationText, peopleText, sortIncidents } from "../lib/format";
+import { VoiceAlerts } from "../components/VoiceAlerts";
 import type { Acknowledgement, IncidentDetail, MatchEvidence } from "../lib/types";
 import { usePoll } from "../lib/usePoll";
 
@@ -238,6 +239,8 @@ function IncidentDetailPage({ id }: { id: string }) {
             )}
           </Card>
 
+          <VoiceAlerts incidentId={i.id} />
+
           <Card>
             <CardHeader title={`Linked reports (${i.reports.length})`} subtitle="Original reports are never deleted; merges and splits only move links." />
             <div className="divide-y divide-line">
@@ -261,7 +264,7 @@ function IncidentDetailPage({ id }: { id: string }) {
                       <Badge title={r.link_score != null ? `match score ${r.link_score}` : undefined}>{label(r.link_outcome)}</Badge>
                       <ModeBadge mode={r.transcript_provider_mode} provider={r.transcript_provider} />
                       {r.priority_label && <PriorityBadge value={r.priority_label} />}
-                      {r.source === "telegram" && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">{label(r.source)}</Badge>}
+                      {(r.source === "telegram" || r.source === "live_call") && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">{label(r.source)}</Badge>}
                       <span className="w-full truncate text-xs text-ink-2 group-open:hidden">"{r.transcript}"</span>
                     </summary>
                     <div className="mt-3 space-y-3">

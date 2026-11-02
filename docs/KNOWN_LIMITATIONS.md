@@ -2,10 +2,24 @@
 
 ## Providers
 
+* **Awaaz Live** — tested end to end against the live APIs with synthetic speech in all four languages, not
+  with real callers in real conditions.
+  * It's half duplex, because Timbre's stream has no cancel message, so a caller can't interrupt the assistant.
+  * Prisma's stream only sends text after each phrase, so there are no live captions while someone is talking.
+  * A pause of 0.9 s ends a phrase, so a slow speaker may be cut off and asked again.
+  * The reply time on screen leaves out that 0.9 s, because Prisma doesn't report when speech ended.
+  * The questions are fixed and only about three fields, so it's a form you can talk to, not a free conversation.
+    Evon could make it more flexible, but it isn't on Gnani's API (see below).
+  * Fact extraction covers Hindi, Marathi, English and Hinglish. Prisma and Timbre support more languages, but
+    a call in those wouldn't extract anything yet, so they aren't offered.
+* **Language detection** — Prisma v3's `indic-auto` labelled Hindi speech as English on a sample clip, so the
+  caller picks a language. Prisma's `detected_language_code` comes from the script of the transcript.
+* **Voice alerts and call wording** — the Hindi and Marathi text hasn't been checked by native speakers. Alerts
+  only reach people who reported the incident on Telegram. Delivery hasn't been tested on a real Telegram chat.
 * **Gnani Prisma (STT)** — adapter follows the public docs (`POST /stt/v3`, `X-API-Key-ID`,
   `audio_file` + `language_code`, verbatim format, 30 s per request, retries on 429/5xx). **Tested
-  and working with live API** (Oct 30, 2026). Prisma has no Hinglish code; mixed speech is sent as
-  `hi-IN`. Audio longer than 30 s is rejected (WAV) or will fail at the provider (other formats) —
+  and working with live API.** Prisma has no Hinglish code, so v3.0 receives Hindi and English together. Audio
+  longer than 30 s is rejected (WAV) or will fail at the provider (other formats) —
   there is no chunking. Optional preprocessing (`AUDIO_PREPROCESSING=true`) applies a spectral noise
   gate + RMS loudness normalisation before the audio is sent to Prisma; requires
   numpy/scipy/noisereduce/soundfile. On any preprocessing error the original file is used unchanged.

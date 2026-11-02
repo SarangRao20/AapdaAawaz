@@ -62,12 +62,17 @@ class Settings:
     stt_provider: str  # auto | prisma | mock
     tts_provider: str  # auto | timbre | none
     extraction_provider: str  # rules | evon
+    prisma_model: str
+    prisma_format: str
     prisma_default_language: str
     prisma_timeout_s: float
     prisma_max_retries: int
     timbre_model: str
     timbre_voices: dict[str, str]
     timbre_timeout_s: float
+    # Live calls use audio tags, which only work on timbre-v3.0.
+    live_timbre_model: str
+    live_timbre_voice: str
     timbre_max_retries: int
 
     # Evon LLM extraction (OpenAI-compatible chat endpoint)
@@ -126,6 +131,8 @@ def load_settings() -> Settings:
         stt_provider=_env("STT_PROVIDER", "auto").lower(),
         tts_provider=_env("TTS_PROVIDER", "auto").lower(),
         extraction_provider=_env("EXTRACTION_PROVIDER", "rules").lower(),
+        prisma_model=_env("PRISMA_MODEL", "prisma-v3.0"),
+        prisma_format=_env("PRISMA_FORMAT", "verbatim"),
         prisma_default_language=_env("PRISMA_DEFAULT_LANGUAGE", "hi-IN"),
         prisma_timeout_s=_env_float("PRISMA_TIMEOUT_S", 30.0),
         prisma_max_retries=_env_int("PRISMA_MAX_RETRIES", 3),
@@ -140,6 +147,8 @@ def load_settings() -> Settings:
             "mixed": _env("TIMBRE_VOICE_MIXED", "Shivani"),
         },
         timbre_timeout_s=_env_float("TIMBRE_TIMEOUT_S", 30.0),
+        live_timbre_model=_env("LIVE_TIMBRE_MODEL", "timbre-v3.0"),
+        live_timbre_voice=_env("LIVE_TIMBRE_VOICE", "Shivani"),
         timbre_max_retries=_env_int("TIMBRE_MAX_RETRIES", 3),
         evon_base_url=_env("EVON_BASE_URL", "https://api.vachana.ai/v1").rstrip("/"),
         evon_model=_env("EVON_MODEL", "evon-v3.3"),

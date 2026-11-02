@@ -90,7 +90,7 @@ export function LiveFeed({ items, compact }: { items: ReportSummary[]; compact?:
             <Badge>{langLabel(r.language)}</Badge>
             <StatusPill status={r.status} />
             {r.priority_label && <PriorityBadge value={r.priority_label} />}
-            {r.source === "telegram" && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">{label(r.source)}</Badge>}
+            {(r.source === "telegram" || r.source === "live_call") && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">{label(r.source)}</Badge>}
             {r.caller_location && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">GPS shared</Badge>}
             {r.is_synthetic && <SyntheticTag />}
           </div>

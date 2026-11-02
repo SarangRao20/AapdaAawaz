@@ -24,8 +24,9 @@ as real model output.
 |---|---|
 | Ingestion: audio upload (WAV/MP3/M4A/AAC/OGG/FLAC), browser recording (→16 kHz WAV), typed transcript, synthetic demo injection | ✅ |
 | Background processing worker with per-stage job records (provider, mode, timing, errors) | ✅ |
-| Gnani **Prisma** speech-to-text adapter (documented REST API, retries, timeouts) | ✅ code + tests + **live API verified (Oct 30, 2026)** |
-| Gnani **Timbre** text-to-speech acknowledgements | ✅ code + tests + **live API verified (Oct 30, 2026)** |
+| **Awaaz Live:** a realtime voice conversation over Gnani Prisma and Timbre streaming, in Hindi, Marathi, English and Hinglish | ✅ code + tests + **live API verified (Nov 3, 2026)** with synthetic speech |
+| Gnani **Prisma v3.0** with village-name hints, over REST and streaming | ✅ code + tests + **live API verified (Nov 3, 2026)**, results in [docs/STT_BENCHMARK.md](docs/STT_BENCHMARK.md) |
+| Gnani **Timbre v3.0** spoken replies, voice notes and multilingual voice alerts | ✅ code + tests + **live API verified (Nov 3, 2026)** |
 | Gnani **Evon** extraction | ⚠️ Evon v3.3 is **Hugging Face open weights only** (not API). Complete OpenAI-compatible adapter implemented for self-hosted deployment, but contest submission uses rule-based extraction |
 | Rule-based extraction (location vs simulated gazetteer, people, vulnerable groups, needs, dangers, urgency, language, transcript quality) | ✅ |
 | Field-level confidence gate + human-review reasons | ✅ |
@@ -34,7 +35,7 @@ as real model output.
 | Human review: verify/correct location, people count, priority, hazard; confirm/reject duplicates; merge; split; notes; full audit log | ✅ |
 | Command Center: live KPIs, Leaflet map with clustering + offline fallback, filters, queue, live feed | ✅ |
 | Evaluation Lab: development + hold-out splits, confusion matrices, P/R, CSV export | ✅ |
-| Tests: 76 backend (pytest) + 5 frontend (vitest); production build | ✅ |
+| Tests: backend (pytest), frontend (vitest), production build | ✅ |
 
 See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) before relying on anything.
 
@@ -89,6 +90,7 @@ Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variab
 | `EVON_BASE_URL` | `https://api.vachana.ai/v1` | Evon LLM endpoint (OpenAI-compatible) |
 | `EVON_MODEL` | `evon-v3.3` | Evon model name |
 | `EVON_TIMEOUT_S` / `EVON_MAX_RETRIES` | `60` / `2` | Timeout and retries for Evon calls |
+| `PRISMA_MODEL`, `PRISMA_FORMAT` | `prisma-v3.0`, `verbatim` | Speech-to-text model and output style. v3.0 sends village-name hints |
 | `TIMBRE_MODEL`, `TIMBRE_VOICE_*` | `timbre-v3.0`, `Shivani` | Voice per language (all v3.0 voices are multilingual). Model and voices must match: v2.5 voice names only work on `timbre-v2.5` |
 | `AAPDA_VAR_DIR` | `backend/var` | SQLite DB, uploads, generated audio |
 | `DATABASE_URL` | `sqlite:///<var>/aapda.db` | |
@@ -97,6 +99,31 @@ Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variab
 
 Runtime thresholds (confidence gate, dedup, priority labels, provider mode) are edited on the
 **Settings** page and stored in the database.
+
+### Awaaz Live
+
+Open **Awaaz Live** in the dashboard, pick a language and press **Start call**. Prisma streams what you say,
+the assistant asks by voice for whatever is still missing (the place, what happened, how many people), reads
+the facts back, and saves a normal report. The Situation Room shows calls as they happen.
+
+A call needs a login, a microphone, and localhost or HTTPS. It's half duplex: the microphone is ignored while
+the assistant speaks, so you can't talk over it. Calls stop after 5 minutes, and they spend Gnani credits.
+
+`LIVE_TIMBRE_MODEL` and `LIVE_TIMBRE_VOICE` choose the voice (default `timbre-v3.0`, `Shivani`), separately from
+`TIMBRE_MODEL`, because the assistant's audio tags only work on v3.0.
+
+### Voice alerts
+
+On an incident page, **Voice alert** plays a fixed safety message in each language, then sends it by text and
+voice note to the people who reported that incident on Telegram, each in their own language. A dispatcher always
+presses send. The wording is written in advance, because Gnani has no translation API and a machine-translated
+safety instruction could be wrong. **Have native speakers check this wording before relying on it.**
+
+### Measuring Prisma
+
+`python scripts/benchmark_stt.py --conditions clean phone phone+noise10 phone+noise0 --variants v2.5 v3-hints`
+(from `backend/`) scores Prisma on synthetic speech, including phone-quality and noisy audio. See
+[docs/STT_BENCHMARK.md](docs/STT_BENCHMARK.md).
 
 ### Dashboard login
 

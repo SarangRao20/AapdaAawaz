@@ -59,6 +59,8 @@ export const LABELS: Record<string, string> = {
   manual_split: "Split by reviewer",
   synthetic_fixture: "Synthetic text fixture",
   telegram: "Telegram",
+  live_call: "Live call",
+  prisma_stream: "Gnani Prisma, streaming",
   location_missing: "Location",
   disaster_unknown: "What happened",
   people_unknown: "Number of people",
