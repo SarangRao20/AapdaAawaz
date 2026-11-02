@@ -1,4 +1,5 @@
 """Provider adapters, using httpx.MockTransport (no network)."""
+import dataclasses
 import json
 from pathlib import Path
 
@@ -97,3 +98,56 @@ def test_mock_stt_never_invents_text(tmp_path):
     assert res.transcript is None and res.mode == "mock"
     hit = MockFixtureSTT().transcribe(AUDIO / "syn-006.wav", "audio/wav", "en")
     assert hit.transcript and hit.raw["matched_fixture"] == "SYN-006"
+
+
+def _captured_fields(**kwargs):
+    seen = {}
+
+    def handler(request):
+        seen["body"] = request.content
+        return httpx.Response(200, json={"success": True, "transcript": "x", "detected_language_code": "mr-IN"})
+
+    stt = PrismaSTT(api_key="k", base_url="https://x.test", transport=httpx.MockTransport(handler), **kwargs)
+    return stt, seen
+
+
+def test_prisma_v3_sends_model_and_village_hints():
+    stt, seen = _captured_fields(model="prisma-v3.0")
+    res = stt.transcribe(AUDIO / "syn-006.wav", "audio/wav", "mr")
+    body = seen["body"].decode("utf-8", "ignore")
+    assert "prisma-v3.0" in body and 'name="keyterms"' in body and "Nandwadi" in body
+    assert res.provider == "gnani-prisma-v3.0" and res.language_code == "mr-IN"
+
+
+def test_prisma_v3_gives_language_hints_when_the_caller_mixes_or_has_not_said():
+    stt, _ = _captured_fields(model="prisma-v3.0")
+    assert stt.request_language("mixed") == "hi-IN,en-IN"
+    assert stt.request_language(None) == "hi-IN,mr-IN,en-IN"
+    assert stt.request_language("mr") == "mr-IN"
+
+
+def test_prisma_v25_sends_none_of_the_v3_fields():
+    stt, seen = _captured_fields(model="prisma-v2.5")
+    stt.transcribe(AUDIO / "syn-006.wav", "audio/wav", None)
+    assert stt.keyterms == ()
+    assert b'name="keyterms"' not in seen["body"] and b'name="model"' not in seen["body"]
+
+
+def test_village_hints_stay_inside_the_documented_limit_and_lead_with_places():
+    from app.services.stt_hints import MAX_KEYTERMS, disaster_keyterms
+    terms = disaster_keyterms()
+    assert len(terms) <= MAX_KEYTERMS and terms[0] == "Nandwadi" and len(set(terms)) == len(terms)
+
+
+def test_live_stream_sends_several_languages_the_way_the_live_api_requires(monkeypatch):
+    from app import config
+    from app.providers import gnani_stream, prisma
+    keyed = dataclasses.replace(config.settings, gnani_api_key="k", prisma_model="prisma-v3.0")
+    monkeypatch.setattr(gnani_stream, "settings", keyed)
+    monkeypatch.setattr(prisma, "settings", keyed)
+    mixed = gnani_stream.PrismaStream("mixed")._headers
+    assert mixed["language_code"] == "hi-IN" and mixed["multi_lang_codes"] == "hi-IN,en-IN"
+    single = gnani_stream.PrismaStream("mr")._headers
+    assert single["language_code"] == "mr-IN" and "multi_lang_codes" not in single
+    # Headers must be plain ASCII, so Indian scripts travel as \\u escapes.
+    assert mixed["keyterms"].isascii() and "Nandwadi" in mixed["keyterms"]

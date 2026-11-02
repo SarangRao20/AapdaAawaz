@@ -66,7 +66,7 @@ const CONVERSATION_STATE: Record<string, { text: string; className: string }> = 
 };
 
 const AUDIO_KIND: Record<string, string> = {
-  caller_audio: "First voice note",
+  caller_audio: "What the caller said",
   caller_followup: "Answer to a follow-up question",
 };
 
@@ -279,7 +279,7 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
                 <span className="text-2xs text-ink-3">{r.acknowledgement.error ?? "Audio not generated yet."}</span>
               </div>
             )}
-            <p className="text-2xs text-ink-3">Fixed wording: never promises rescue, arrival times or resolution. {r.source === "telegram" ? "The Telegram bot replies to the caller using this template." : "Not sent to anyone by this prototype."}</p>
+            <p className="text-2xs text-ink-3">Fixed wording: never promises rescue, arrival times or resolution. {r.source === "live_call" ? "The caller heard the assistant's spoken questions, not this text." : r.source === "telegram" ? "The Telegram bot replies to the caller using this template." : "Not sent to anyone by this prototype."}</p>
           </div>
         </Section>
       )}

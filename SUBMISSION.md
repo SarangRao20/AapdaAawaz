@@ -1,183 +1,139 @@
 # Gnani Internship Challenge Submission
 
-**Project:** Aapda Awaaz — Voice Intelligence for Disaster Response  
-**Builder:** Sarang Rao (Solo)  
-**Submission Date:** October 30, 2026  
-**Demo Post:** [LinkedIn URL] | [X/Twitter URL] *(to be added after posting)*
+> **Before submitting, replace everything marked `[TO CONFIRM]` and delete this note.**
+
+**Project:** Aapda Awaaz: a voice assistant for disaster response, built on Gnani AI
+**Builder:** `[TO CONFIRM: your registered name, or both names if you are a team of two]`
+**Demo video:** `[TO CONFIRM: link]`
+**Posts:** `[TO CONFIRM: LinkedIn URL]` | `[TO CONFIRM: X URL]` (live before submitting, tagging Gnani AI, with #GnaniAI and #GreatIndianAIInternshipChallenge)
 
 ---
 
-## 🎯 Problem Solved
+## The problem
 
-During disasters like floods, emergency call centers receive hundreds of chaotic voice reports in multiple Indian languages — callers are panicked, reports are code-mixed (Hinglish/Marathi/Hindi), locations are ambiguous, and the same incident gets reported multiple times from different people.
+In a flood, emergency lines fill up. Callers are frightened, they switch between languages, and many reports describe
+the same place. People wait, and dispatchers get a pile of unstructured audio.
 
-**Aapda Awaaz** transforms this chaos into a structured, prioritized incident picture that helps human dispatchers make life-saving decisions:
+## The users
+
+* **People in a disaster,** who may only be able to speak, in Hindi, Marathi, English or Hinglish.
+* **Dispatchers,** who need to know where, what and how many people, and which report comes first.
+
+## What it does
+
+**Awaaz Live is a realtime voice conversation.** The caller speaks. Gnani Prisma transcribes it, and Gnani Timbre asks
+aloud, in the caller's language, for only what's still missing: the place, what happened, or how many people. It then
+reads the facts back to confirm them.
+
+While that happens, a dispatcher watches the report fill in live, already ranked, with no typing. The dispatcher can
+then send a **voice alert** back, spoken by Timbre in each person's own language.
+
+The same voice flow also runs as a **Telegram bot** that takes voice notes and asks follow-up questions by text and voice.
 
 ```
-Voice report → Gnani Prisma STT → Structured extraction → Confidence gate
-→ Duplicate detection → Explainable priority → Map + queue → Human dispatcher
+Caller speaks → Prisma v3.0 streaming → facts extracted → Timbre v3.0 asks for what's missing → report
+                                                                    ↓
+                     Dispatcher sees it live → reviews → voice alert by Timbre in each language
 ```
 
 ---
 
-## 🧠 Gnani AI Models Used
+## Gnani AI models used
 
-### 1. **Prisma v2.5 (Speech-to-Text)**
-- Transcribes emergency calls in Marathi, Hindi, Hinglish, and English
-- Handles noisy telephonic audio (targets Noise Canceller Award)
-- Tested live: ✅ Working with contest API key (Oct 30, 2026)
-- Optional preprocessing: spectral noise gate + RMS normalization
+Voice is the product here, and every word the caller hears or says goes through Gnani.
 
-### 2. **Timbre v3.0 (Text-to-Speech)**
-- Generates spoken acknowledgements in the caller's language
-- Voice: `Shivani` (warm, empathetic; speaks Hindi, Marathi, English and Hinglish)
-- Tested live: ✅ Working with contest API key
+### Prisma (speech to text)
+* **Realtime streaming** over WebSocket for the live conversation, using its voice activity detection to know when
+  the caller has stopped.
+* **Prisma v3.0 `keyterms`:** we send local village names and disaster words, so the places that matter are heard
+  correctly. On our benchmark this took the village from 6/12 clips to 12/12.
+* **Code-mixed speech:** Hinglish calls use v3.0's `codemix` format, keeping English words in Latin script.
+* **REST** for uploaded audio and Telegram voice notes.
 
-### Architecture: End-to-end Gnani API integration
-- Audio upload → **Prisma** transcription → Rule-based extraction* → **Timbre** acknowledgement
-- *Rule-based extraction used because Evon v3.3 is Hugging Face open weights only (not API)
-- Complete Evon adapter implemented (`app/providers/evon.py`) for future self-hosted deployment
+### Timbre (text to speech)
+* **Realtime streaming** over WebSocket, so a reply starts in about a second.
+* **v3.0 audio tags** for delivery, such as natural pauses between sentences, at a slightly slower speed for a
+  frightened caller.
+* **One voice in several languages** for the questions, the read-back and the voice alerts.
 
----
-
-## 🏆 Award Categories Targeted
-
-1. **Real Deal Award** — Solves disaster response coordination for rural/crisis contexts
-2. **Noise Canceller Award** — Audio preprocessing for telephonic quality
-3. **Mixed Vibes Award** — Native Hinglish/code-mixed speech handling  
-4. **Jugaad Genius Award** — Creative duplicate detection + explainable priority scoring
-5. **Demo Day Drop Award** — Polished 60-second walkthrough prepared
-6. **Solo Ninja Award** — Built entirely by one person
+### Not used
+* **Evon** isn't on Gnani's API. Questions and extraction are deterministic rules, which also means the assistant can't
+  improvise a promise of rescue. An adapter exists for a self-hosted Evon, but it isn't part of this entry.
+* **Agent Builder** is out of scope under the contest rules.
 
 ---
 
-## 👤 Contribution (Solo Project)
+## Results
 
-**Sarang Rao** — All components
+All measured against the live Gnani API on November 3, 2026, using synthetic speech only.
 
-- **Architecture & Design:** Multi-stage pipeline with field-level confidence gating
-- **Backend (Python/FastAPI):** 
-  - Gnani Prisma & Timbre adapters with retry logic
-  - Rule-based extraction (11-language lexicon)
-  - Deterministic duplicate detection with evidence
-  - Explainable priority scoring (severity separate from confidence)
-  - Human review workflow with full audit trail
-  - 47 pytest tests (76 passed including integration)
-- **Frontend (React/TypeScript):**
-  - Leaflet map with clustering + offline fallback
-  - Live KPI dashboard, queue, filters
-  - Browser audio recording (16kHz WAV)
-  - 5 vitest tests, production build verified
-- **Data:** 52 synthetic reports (Marathi/Hindi/Hinglish/English), simulated gazetteer
-- **Documentation:** 6 docs (Architecture, API, Safety, Evaluation, Demo Script, Known Limitations)
+**Live calls:** full conversations completed in Hindi, Marathi, Hinglish and English, each producing the right place,
+disaster and head count. In those calls, Prisma took about 0.2–0.5 s to transcribe a phrase, and the assistant's voice
+began about 1.1–1.5 s after that started. On top of this, Prisma waits for 0.9 s of silence to know the caller has stopped.
 
----
+**Noisy phone audio** (12 clips, see [docs/STT_BENCHMARK.md](docs/STT_BENCHMARK.md)). Clips with village, disaster and head count all correct:
 
-## ✅ Verification
+| Audio | Prisma v2.5 | Prisma v3.0 + our hints |
+|---|---:|---:|
+| Clean | 6/12 | 11/12 |
+| Phone quality | 6/12 | 11/12 |
+| Phone + noise at 10 dB | 6/12 | 11/12 |
+| Phone + noise as loud as the speech | 6/12 | 10/12 |
 
-- ✅ **Live Gnani API tested** — Prisma STT + Timbre TTS working (Oct 30, 2026)
-- ✅ **Tests passing** — 76 backend + 5 frontend tests
-- ✅ **Production build** — Frontend builds successfully (`npm run build`)
-- ✅ **Runs fully offline** — Laptop-only, no cloud dependencies
-- ✅ **Demo ready** — 60-second script prepared (docs/DEMO_SCRIPT.md)
-- ✅ **Public demo video** — Posted with #GnaniAI #GreatIndianAIInternshipChallenge
+This is a small synthetic test, not a measure of real callers. Our own noise filter didn't improve on Prisma, so it stays off.
+
+**Triage on the 40 synthetic sample reports:** 22 candidate incidents, 18 duplicates linked automatically, 7 possible
+duplicates left for a person to decide, and 13 critical incidents.
 
 ---
 
-## 🌟 Key Features
+## Responsible design
 
-### Responsible AI
-- **Uncertainty-aware:** Fields the system is unsure about are flagged, not guessed
-- **No auto-dispatch:** Every critical decision stays with a human dispatcher
-- **Explainable priority:** "+55 threat to life, +45 medical emergency..." — not a black box
-- **Audit trail:** Every human correction is logged with timestamp and reason
+* **A person always decides.** Nothing is dispatched automatically, and a dispatcher chooses to send every alert.
+* **It doesn't pretend.** It says it isn't an emergency service, points to 112, and never promises help is coming.
+* **Fixed wording.** Questions and safety messages are written in advance, because a machine-translated safety
+  instruction could be wrong. They still need checking by native speakers.
+* **Uncertainty stays visible.** Unclear details are flagged for review, and unverified locations are marked as such.
+* **Explainable ranking.** Each priority shows the reasons behind it.
+* **Evidence is kept.** The caller's audio, the transcript and an audit trail stay with each report.
+* **Private by default.** The dashboard needs a login, and reports with real voices are never on the public routes.
 
-### Multilingual & Code-Mixed
-- Marathi, Hindi, English, Hinglish natively
-- Caller's language detected → acknowledgement generated in same language
-
-### Duplicate Detection
-- "Likely duplicate" (same place + hazard + facts) → auto-linked
-- "Possible duplicate" (contradictory details) → human review required
-- Never auto-merges ambiguous cases
-
-### Field-Level Confidence
-- Location ambiguous? Not placed on map (human verifies first)
-- People count approximate? Marked as "~25 people" not "25 people"
-- Transcript quality low? Routed to manual review
+The main limits are in [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md). Most importantly, this is a prototype that
+has been tested with synthetic speech, not real callers, and a caller can't yet interrupt the assistant.
 
 ---
 
-## 📊 Demo Results (Synthetic Data)
+## Awards this fits
 
-After loading 40 synthetic reports:
-- **22 candidate incidents** identified
-- **18 duplicates** automatically linked
-- **7 possible duplicates** pending human review
-- **13 critical incidents** prioritized
-- **10 critical incidents** awaiting location/fact verification
+`[TO CONFIRM: choose after settling solo or team. An entry can win only one award.]`
 
-Every uncertain case routed to human dispatcher — **zero fabricated coordinates, zero confident guesses**.
-
----
-
-## 🔧 Technical Stack
-
-- **Backend:** Python 3.11+, FastAPI, SQLAlchemy, SQLite, httpx, pydantic
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Leaflet, Recharts
-- **Gnani APIs:** Prisma v2.5 (STT), Timbre v2.5 (TTS)
-- **Testing:** pytest (backend), vitest (frontend)
-- **Deployment:** Runs on Windows/Linux laptop, fully offline capable
+* **Real Deal:** a voice assistant for people in a disaster and the dispatchers helping them.
+* **Noise Canceller:** the benchmark above, on phone-quality audio with heavy noise.
+* **Mixed Vibes:** a live Hinglish conversation, with code-mixed transcription.
+* **Demo Day Drop:** the 60-second demo in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
+* **Solo Ninja or Two-Person Army:** whichever matches how the entry is registered.
 
 ---
 
-## 📁 Repository
+## Contribution of each member
 
-- **Code:** [GitHub URL if public, or "Available on request"]
-- **Documentation:** README.md + 6 detailed docs
-- **Demo Script:** docs/DEMO_SCRIPT.md (60-second walkthrough)
-- **Tests:** `pytest -q` (backend), `npm test` (frontend)
-- **Quick start:** PowerShell scripts for Windows (`setup.ps1`, `run-backend.ps1`, `run-frontend.ps1`)
+`[TO CONFIRM: what each person built. The contest requires this, and it must match the registration.]`
 
 ---
 
-## 🎬 Demo Video
+## Technical stack
 
-**Platform:** LinkedIn | X/Twitter  
-**Duration:** 60 seconds  
-**Hashtags:** #GnaniAI #GreatIndianAIInternshipChallenge  
-**Content:**
-1. Incoming Hinglish call → Prisma transcribes
-2. Structured fields extracted → Timbre acknowledges
-3. 40 reports → 22 incidents, duplicates linked
-4. Explainable priority queue
-5. Human verification of ambiguous case
+* **Backend:** Python, FastAPI, SQLAlchemy, SQLite, WebSockets
+* **Frontend:** React, TypeScript, Vite, Tailwind CSS, Leaflet
+* **Gnani:** Prisma v3.0 (streaming and REST), Timbre v3.0 (streaming and REST)
+* **Also:** Telegram Bot API, optional MCP server
+* **Tests:** pytest and vitest (`pytest -q` in `backend/`, `npm test` in `frontend/`)
 
-**Post URL:** [To be added after posting]
+A live call needs internet access and Gnani credits. The sample data and dashboard also run without them, using a clearly
+labelled mock.
 
----
+## Repository
 
-## 💡 Why This Matters
+`[TO CONFIRM: public GitHub URL, or "available on request"]`. Quick start is in [README.md](README.md).
 
-In the 2005 Mumbai floods and 2013 Uttarakhand disaster, emergency responders were overwhelmed by duplicate reports, language barriers, and information chaos. **Aapda Awaaz** demonstrates how Indian-language speech AI can:
-
-- **Reduce cognitive load** on dispatchers with structured, deduplicated data
-- **Respect uncertainty** by flagging, not guessing, ambiguous information
-- **Work offline** when internet/cloud infrastructure fails during disasters
-- **Explain decisions** so humans understand why an incident is prioritized
-
-Built for humans making life-and-death decisions under pressure.
-
----
-
-## 📞 Contact
-
-**Sarang Rao**  
-Email: [Your email]  
-LinkedIn: [Your LinkedIn]  
-GitHub: [Your GitHub]
-
----
-
-**Last updated:** October 30, 2026  
 **Contest deadline:** November 10, 2026, 11:59 PM IST

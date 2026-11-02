@@ -4,24 +4,25 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 const STEPS = [
-  { icon: AudioLines, title: "A report comes in", text: "Someone sends a voice note on Telegram or the caller app, or a dispatcher records one." },
-  { icon: Waypoints, title: "The facts are pulled out", text: "Speech becomes text, then the location, what happened and the number of people are identified." },
-  { icon: MessageCircleQuestion, title: "Missing details are requested", text: "The Telegram bot asks for what's missing, one question at a time, by text and voice note." },
-  { icon: ClipboardCheck, title: "A dispatcher decides", text: "Reports are ranked, grouped into incidents and placed on a map for a person to review." },
+  { icon: AudioLines, title: "Someone speaks", text: "In a live call, a Telegram voice note or the caller app, in Hindi, Marathi, English or Hinglish." },
+  { icon: Waypoints, title: "Gnani Prisma listens", text: "Streaming speech-to-text, primed with local village names so places are heard correctly." },
+  { icon: MessageCircleQuestion, title: "Gnani Timbre asks what's missing", text: "A calm voice asks one question at a time, then reads the facts back to confirm them." },
+  { icon: ClipboardCheck, title: "A dispatcher decides", text: "The report fills in live, is ranked and mapped, and a person can send voice alerts back." },
 ];
 
 const POINTS = [
-  { icon: Languages, title: "Works in the caller's language", text: "Hindi, Marathi, English and Hinglish." },
+  { icon: Languages, title: "Works in the caller's language", text: "Hindi, Marathi, English and Hinglish, in both directions." },
   { icon: ShieldCheck, title: "Evidence you can check", text: "The original audio, the transcript and the reason for each ranking stay with every report." },
   { icon: AlertTriangle, title: "Clear about uncertainty", text: "Doubtful details are flagged for review, and unverified locations are marked as unverified." },
 ];
 
 const BARS = [28, 52, 36, 70, 44, 88, 60, 34, 76, 48, 92, 56, 30, 66, 42, 80, 50, 26, 62, 38];
 
-const EXAMPLE_FIELDS = [
-  ["Location", "Nandwadi"],
-  ["What happened", "Flood"],
-  ["People", "25"],
+const EXAMPLE_CALL = [
+  { speaker: "Caller", text: "Yahan baadh aa gayi hai, log phanse hain." },
+  { speaker: "Assistant", text: "Theek hai. Aap kahan se bol rahe hain?" },
+  { speaker: "Caller", text: "Nandwadi gaon se." },
+  { speaker: "Assistant", text: "Kitne log phanse hain?" },
 ];
 
 function Logo() {
@@ -40,7 +41,7 @@ function ExampleReport() {
   const reduced = useReducedMotion();
   return (
     <div className="rounded-2xl border border-line bg-surface-1 p-5 shadow-glass">
-      <div className="text-2xs font-medium uppercase tracking-[0.14em] text-ink-3">Example report</div>
+      <div className="text-2xs font-medium uppercase tracking-[0.14em] text-ink-3">Example conversation</div>
 
       <div className="mt-4 flex h-14 items-center gap-1" aria-hidden>
         {BARS.map((height, i) => (
@@ -54,18 +55,16 @@ function ExampleReport() {
         ))}
       </div>
 
-      <blockquote lang="hi" className="mt-4 rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm leading-relaxed text-ink">
-        “Nandwadi gaon mein baadh aayi hai, 25 log phanse hain, madad chahiye.”
-      </blockquote>
-
-      <dl className="mt-4 divide-y divide-line">
-        {EXAMPLE_FIELDS.map(([name, value]) => (
-          <div key={name} className="flex items-center justify-between py-2 text-sm">
-            <dt className="text-ink-3">{name}</dt>
-            <dd className="font-medium text-ink">{value}</dd>
-          </div>
+      <ol className="mt-4 space-y-2">
+        {EXAMPLE_CALL.map((line, i) => (
+          <li key={i} className={line.speaker === "Caller" ? "flex justify-end" : "flex justify-start"}>
+            <div className={line.speaker === "Caller" ? "max-w-[85%] rounded-2xl bg-accent/15 px-3 py-1.5 text-sm text-ink" : "max-w-[85%] rounded-2xl bg-surface-2 px-3 py-1.5 text-sm text-ink"}>
+              <div className="text-2xs text-ink-3">{line.speaker === "Caller" ? "Caller, heard by Prisma" : "Assistant, spoken by Timbre"}</div>
+              {line.text}
+            </div>
+          </li>
         ))}
-      </dl>
+      </ol>
     </div>
   );
 }
@@ -73,8 +72,8 @@ function ExampleReport() {
 export function Landing() {
   const { status } = useAuth();
   const loggedIn = status === "in";
-  const destination = loggedIn ? "/live" : "/login";
-  const action = loggedIn ? "Open the dashboard" : "Log in to the dashboard";
+  const destination = loggedIn ? "/awaaz" : "/login";
+  const action = loggedIn ? "Open Awaaz Live" : "Log in to try a live call";
 
   return (
     <div className="min-h-full">
@@ -89,20 +88,19 @@ export function Landing() {
             to={destination}
             className="rounded-lg border border-line-strong px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
           >
-            {loggedIn ? "Dashboard" : "Log in"}
+            {loggedIn ? "Awaaz Live" : "Log in"}
           </Link>
         </header>
 
         <main>
           <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-8 md:px-8 md:pt-16 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
             <div>
-              <p className="text-sm font-medium text-accent-glow [html.light_&]:text-accent-dim">Voice reports for disaster response</p>
+              <p className="text-sm font-medium text-accent-glow [html.light_&]:text-accent-dim">A voice assistant for disaster response, built on Gnani AI</p>
               <h1 className="mt-3 text-4xl font-semibold leading-[1.1] tracking-tight text-ink md:text-5xl">
-                Turn voice calls for help into a clear picture
+                When the phone lines are full, a voice still answers
               </h1>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-2 md:text-lg">
-                Aapda Awaaz listens to voice notes from people in a disaster, notes what they said, and shows dispatchers which
-                reports need attention first.
+                Aapda Awaaz holds a live conversation in the caller's own language: Gnani Prisma listens, Gnani Timbre speaks, and it asks only for what's still missing. A dispatcher watches the report fill in as the person talks.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
@@ -163,7 +161,7 @@ export function Landing() {
         </main>
 
         <footer className="border-t border-line">
-          <div className="mx-auto max-w-6xl px-4 py-6 text-xs text-ink-3 md:px-8">Built on Gnani AI Prisma and Timbre</div>
+          <div className="mx-auto max-w-6xl px-4 py-6 text-xs text-ink-3 md:px-8">Voice by Gnani AI: Prisma streaming speech-to-text and Timbre streaming text-to-speech</div>
         </footer>
       </div>
     </div>

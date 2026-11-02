@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .. import models
 from ..db import get_db
+from ..providers.base import ProviderError, ProviderUnavailable
 from ..schemas import IncidentReviewRequest, MergeRequest, SplitRequest, SuggestionDecision
 from ..services import priority as prio
 from ..services import review as review_svc
+from ..services import voice_alerts
 from .serializers import incident_detail, incident_summary, suggestion_view
 
 router = APIRouter(prefix="/api", tags=["incidents"])
@@ -141,3 +144,50 @@ def confirm(suggestion_id: int, body: SuggestionDecision, db: Session = Depends(
 @router.post("/suggestions/{suggestion_id}/reject", summary="Reject an incorrect duplicate suggestion")
 def reject(suggestion_id: int, body: SuggestionDecision, db: Session = Depends(get_db)):
     return suggestion_view(_run(review_svc.decide_suggestion, db, suggestion_id, False, body.reviewer, body.notes))
+
+
+class AlertSend(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    template: str = Field(min_length=1, max_length=64)
+    reviewer: str = Field(min_length=1, max_length=120)
+
+
+def _incident_for_alert(db: Session, incident_id: str) -> models.Incident:
+    incident = db.get(models.Incident, incident_id)
+    if incident is None:
+        raise HTTPException(404, "incident not found")
+    return incident
+
+
+@router.get("/incidents/{incident_id}/alerts", summary="Safety messages for this incident, and who would receive them")
+def alert_options(incident_id: str, db: Session = Depends(get_db)):
+    incident = _incident_for_alert(db, incident_id)
+    chats = voice_alerts.recipients(db, incident_id)
+    languages: dict[str, int] = {}
+    for _chat, language in chats:
+        languages[language] = languages.get(language, 0) + 1
+    return {"templates": voice_alerts.templates_for(incident), "recipients": {"total": len(chats), "languages": languages}}
+
+
+@router.get("/incidents/{incident_id}/alerts/preview", summary="Hear a safety message spoken by Gnani Timbre")
+def alert_preview(incident_id: str, template: str = Query(max_length=64), language: str = Query(max_length=8),
+                  db: Session = Depends(get_db)):
+    incident = _incident_for_alert(db, incident_id)
+    try:
+        speech = voice_alerts.speak(db, template, language, voice_alerts.place_name(incident))
+    except voice_alerts.AlertError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except ProviderUnavailable as exc:
+        raise HTTPException(503, str(exc)) from exc
+    except ProviderError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    return Response(speech.audio, media_type=speech.content_type)
+
+
+@router.post("/incidents/{incident_id}/alerts/send", summary="Send a safety message to the people who reported this incident")
+def alert_send(incident_id: str, body: AlertSend, db: Session = Depends(get_db)):
+    incident = _incident_for_alert(db, incident_id)
+    try:
+        return voice_alerts.send(db, incident, body.template, body.reviewer)
+    except voice_alerts.AlertError as exc:
+        raise HTTPException(400, str(exc)) from exc

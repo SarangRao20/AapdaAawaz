@@ -6,6 +6,10 @@ Implements only what is documented at https://docs.gnani.ai/api/STT/speech-to-te
       audio_file      file    (WAV, MP3, OGG, FLAC, AAC, M4A; documented max 30 s per request)
       language_code   string  (bn-IN, en-IN, gu-IN, hi-IN, kn-IN, ml-IN, mr-IN, pa-IN, ta-IN, te-IN)
       format          "verbatim" (default) - we keep verbatim so quantities/names are not rewritten
+    Prisma v3.0 adds (https://docs.gnani.ai/api/STT/models/prisma-v3):
+      model           "prisma-v3.0" (v2.5 is used when this is left out)
+      language_code   also accepts several codes, which are hints and not a lock
+      keyterms        words to listen for, such as village names (up to 200)
     Header: X-API-Key-ID
     200 -> {"success": true, "request_id": "...", "timestamp": "...", "transcript": "..."}
     400 invalid params / audio, 403 key/credits, 429 rate limit, 500/503 retry with backoff.
@@ -16,33 +20,47 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 import httpx
 
 from ..config import PRISMA_LANGUAGE_CODES, settings
+from ..services.stt_hints import disaster_keyterms
 from .base import ProviderError, ProviderUnavailable, TranscriptionResult
 
 log = logging.getLogger("aapda.providers.prisma")
 
 SUPPORTED_LANGUAGE_CODES = {"bn-IN", "en-IN", "gu-IN", "hi-IN", "kn-IN", "ml-IN", "mr-IN", "pa-IN", "ta-IN", "te-IN"}
 TRANSIENT_STATUS = {429, 500, 502, 503, 504}
+V3_LANGUAGE_HINTS = {"mixed": "hi-IN,en-IN", None: "hi-IN,mr-IN,en-IN", "": "hi-IN,mr-IN,en-IN"}
 
 
 class PrismaSTT:
-    name = "gnani-prisma-v2.5"
     mode = "real"
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None,
                  timeout_s: float | None = None, max_retries: int | None = None,
-                 transport: httpx.BaseTransport | None = None):
+                 transport: httpx.BaseTransport | None = None, model: str | None = None,
+                 fmt: str | None = None, keyterms: Sequence[str] | None = None):
         self._api_key = api_key if api_key is not None else settings.gnani_api_key
         self.base_url = (base_url or settings.gnani_base_url).rstrip("/")
         self.timeout_s = timeout_s if timeout_s is not None else settings.prisma_timeout_s
         self.max_retries = max_retries if max_retries is not None else settings.prisma_max_retries
         self._transport = transport
+        self.model = model or settings.prisma_model
+        self.fmt = fmt or settings.prisma_format
+        self.keyterms = disaster_keyterms() if keyterms is None and self.is_v3 else (keyterms or ())
         if not self._api_key:
             raise ProviderUnavailable("GNANI_API_KEY is not configured")
+
+    @property
+    def name(self) -> str:
+        return f"gnani-{self.model}"
+
+    @property
+    def is_v3(self) -> bool:
+        return self.model.startswith("prisma-v3")
 
     def language_code(self, language: str | None) -> str:
         code = PRISMA_LANGUAGE_CODES.get(language or "", settings.prisma_default_language)
@@ -50,8 +68,23 @@ class PrismaSTT:
             raise ProviderError(f"language code {code!r} is not supported by Prisma")
         return code
 
+    def request_language(self, language: str | None) -> str:
+        """v3 takes several codes as hints, which suits a caller who switches language or hasn't said."""
+        if self.is_v3 and language in V3_LANGUAGE_HINTS:
+            return V3_LANGUAGE_HINTS[language]
+        return self.language_code(language)
+
+    def request_fields(self, language: str | None) -> dict[str, str]:
+        fields = {"language_code": self.request_language(language), "format": self.fmt}
+        if self.is_v3:
+            fields["model"] = self.model
+            if self.keyterms:
+                fields["keyterms"] = ",".join(self.keyterms)
+        return fields
+
     def transcribe(self, audio_path: Path, mime_type: str, language: str | None) -> TranscriptionResult:
-        code = self.language_code(language)
+        fields = self.request_fields(language)
+        code = fields["language_code"]
         url = f"{self.base_url}/stt/v3"
         attempt = 0
         with httpx.Client(timeout=self.timeout_s, transport=self._transport) as client:
@@ -62,7 +95,7 @@ class PrismaSTT:
                         resp = client.post(
                             url,
                             headers={"X-API-Key-ID": self._api_key},
-                            data={"language_code": code, "format": "verbatim"},
+                            data=fields,
                             files={"audio_file": (audio_path.name, fh, mime_type)},
                         )
                 except httpx.TimeoutException as exc:
@@ -95,7 +128,7 @@ class PrismaSTT:
             transcript=transcript,
             provider=self.name,
             mode=self.mode,
-            language_code=code,
+            language_code=body.get("detected_language_code") or code,
             request_id=body.get("request_id"),
             raw=body,
         )

@@ -30,9 +30,9 @@ def _get(db: Session, report_id: str) -> models.Report:
 
 
 def _get_for_caller(request: Request, db: Session, report_id: str) -> models.Report:
-    """For routes the public caller app uses. Telegram reports hold real voices and GPS, so they need a login."""
+    """For routes the public caller app uses. Telegram and live calls hold real voices, so they need a login."""
     rep = _get(db, report_id)
-    if rep.source == "telegram" and not request.state.authenticated:
+    if rep.source in ("telegram", "live_call") and not request.state.authenticated:
         raise HTTPException(404, "report not found")
     return rep
 

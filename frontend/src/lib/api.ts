@@ -4,6 +4,7 @@ import type {
   Gazetteer,
   Incident,
   IncidentDetail,
+  LiveCallSummary,
   Paged,
   ProviderStatus,
   ReportDetail,
@@ -12,6 +13,7 @@ import type {
   Stats,
   Suggestion,
   SuggestionItem,
+  VoiceAlertOptions,
   Acknowledgement,
 } from "./types";
 
@@ -66,6 +68,15 @@ export function qs(params: Record<string, string | number | boolean | undefined 
 
 export const api = {
   session: () => request<Session>("/api/auth/me"),
+  liveCalls: () => request<{ items: LiveCallSummary[] }>("/api/live/calls"),
+  alertOptions: (id: string) => request<VoiceAlertOptions>(`/api/incidents/${encodeURIComponent(id)}/alerts`),
+  alertPreviewUrl: (id: string, template: string, language: string) =>
+    `/api/incidents/${encodeURIComponent(id)}/alerts/preview${qs({ template, language })}`,
+  sendAlert: (id: string, template: string, reviewer: string) =>
+    request<{ sent: number; failed: number; voice: number; languages: string[] }>(
+      `/api/incidents/${encodeURIComponent(id)}/alerts/send`,
+      json({ template, reviewer }),
+    ),
   login: (username: string, password: string) => request<Session>("/api/auth/login", json({ username, password })),
   logout: () => request<Session>("/api/auth/logout", { method: "POST" }),
   health: () => request<{ status: string; worker_queue: number; providers: ProviderStatus }>("/api/health"),

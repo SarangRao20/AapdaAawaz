@@ -133,6 +133,7 @@ export function Reports() {
               </Select>
               <Select className="h-8 w-32 text-xs" value={source} onChange={(e) => setSource(e.target.value)} aria-label="Source filter">
                 <option value="">All sources</option>
+                <option value="live_call">Live call</option>
                 <option value="telegram">Telegram</option>
                 <option value="recording">Recording</option>
                 <option value="upload">Upload</option>

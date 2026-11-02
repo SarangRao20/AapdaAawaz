@@ -4,6 +4,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AttentionList } from "../components/AttentionList";
 import { DemoControls } from "../components/DemoControls";
+import { LiveCallsPanel } from "../components/LiveCallsPanel";
 import { Globe } from "../components/Globe";
 import { IncidentMap } from "../components/IncidentMap";
 import { IncidentQueue } from "../components/IncidentQueue";
@@ -128,6 +129,8 @@ export function CommandCenter() {
           <div className="mt-0.5 text-2xl font-semibold text-ink">{s?.total_reports ?? 0}</div>
         </div>
       </Reveal>
+
+      <LiveCallsPanel />
 
       <Reveal className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
         <Card className="relative overflow-hidden">
