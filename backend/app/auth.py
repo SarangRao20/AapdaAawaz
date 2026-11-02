@@ -36,6 +36,9 @@ PUBLIC_ROUTES: list[tuple[str, re.Pattern[str]]] = [
     ("GET", re.compile(r"/api/reports/[^/]+")),
     ("POST", re.compile(r"/api/reports/[^/]+/acknowledgement")),
     ("GET", re.compile(r"/api/reports/[^/]+/acknowledgement/audio")),
+    # Twilio voice webhooks: Twilio calls these, so it cannot hold a login cookie.
+    ("GET", re.compile(r"/api/twilio/(voice|incoming|status)")),
+    ("POST", re.compile(r"/api/twilio/(voice|incoming|recording|status)")),
 ]
 
 
