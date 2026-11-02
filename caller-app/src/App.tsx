@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { pollReport, triggerAck, uploadAudio } from "./api";
 import type { ReportStatus } from "./api";
+import LiveCallScreen from "./LiveCall";
 
-type Screen = "home" | "processing" | "done" | "followup";
+type Screen = "home" | "processing" | "done" | "followup" | "live";
 type Lang = "hi" | "mr" | "en";
 
 const LANG_LABELS: Record<Lang, string> = { hi: "हिंदी", mr: "मराठी", en: "English" };
@@ -42,6 +43,12 @@ const PauseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
     <rect x="6" y="4" width="4" height="16" rx="1" />
     <rect x="14" y="4" width="4" height="16" rx="1" />
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
   </svg>
 );
 
@@ -327,6 +334,11 @@ export default function App() {
     rec.reset();
   };
 
+  /* ── LIVE CALL ────────────────────────────────────────────────────────── */
+  if (screen === "live") {
+    return <LiveCallScreen lang={lang} onHome={() => setScreen("home")} />;
+  }
+
   /* ── HOME ─────────────────────────────────────────────────────────────── */
   if (screen === "home") {
     return (
@@ -448,6 +460,19 @@ export default function App() {
 
         {/* upload fallback + errors */}
         <div className="px-6 pb-10">
+          <button
+            onClick={() => setScreen("live")}
+            className="w-full mb-3 flex items-center gap-3 rounded-2xl border border-[#f97316]/25 bg-[#f97316]/8 px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
+          >
+            <span className="w-10 h-10 rounded-full bg-[#f97316]/15 border border-[#f97316]/30 flex items-center justify-center text-[#f97316] flex-shrink-0">
+              <PhoneIcon />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-[#f2f2f2]">Awaaz Live से बात करें</span>
+              <span className="block text-[11px] text-[#525252] mt-0.5">Live voice conversation · बोलकर रिपोर्ट करें</span>
+            </span>
+            <span className="text-[#f97316] text-lg leading-none">›</span>
+          </button>
           <label className="block w-full py-3.5 rounded-2xl border border-white/8 text-[#525252] text-sm text-center cursor-pointer hover:border-white/15 hover:text-[#a3a3a3] transition-colors">
             Or upload an audio file
             <input type="file" accept="audio/*" className="hidden" onChange={(e) => e.target.files?.[0] && void submit(e.target.files[0])} />

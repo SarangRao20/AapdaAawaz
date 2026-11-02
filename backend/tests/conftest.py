@@ -16,6 +16,8 @@ os.environ["TELEGRAM_BOT_TOKEN"] = ""
 os.environ["STT_PROVIDER"] = "mock"
 os.environ["TTS_PROVIDER"] = "none"
 os.environ["LOG_LEVEL"] = "WARNING"
+# A developer's .env may switch public live calls on; the tests need a known default.
+os.environ["LIVE_PUBLIC"] = "false"
 
 import time  # noqa: E402
 

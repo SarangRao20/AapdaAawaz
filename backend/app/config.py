@@ -75,6 +75,13 @@ class Settings:
     live_timbre_voice: str
     timbre_max_retries: int
 
+    # Awaaz Live from the public caller app. Off unless switched on, and capped
+    # because every call spends Gnani credits in real time.
+    live_public: bool            # LIVE_PUBLIC
+    live_max_concurrent: int     # LIVE_MAX_CONCURRENT — calls at once across all devices
+    live_max_per_ip: int         # LIVE_MAX_PER_IP — calls at once from one address
+    live_max_per_hour: int       # LIVE_MAX_PER_HOUR — calls started per address in an hour
+
     # Evon LLM extraction (OpenAI-compatible chat endpoint)
     evon_base_url: str          # EVON_BASE_URL
     evon_model: str             # EVON_MODEL
@@ -160,6 +167,10 @@ def load_settings() -> Settings:
         live_timbre_model=_env("LIVE_TIMBRE_MODEL", "timbre-v3.0"),
         live_timbre_voice=_env("LIVE_TIMBRE_VOICE", "Shivani"),
         timbre_max_retries=_env_int("TIMBRE_MAX_RETRIES", 3),
+        live_public=_env_bool("LIVE_PUBLIC", False),
+        live_max_concurrent=max(_env_int("LIVE_MAX_CONCURRENT", 6), 1),
+        live_max_per_ip=max(_env_int("LIVE_MAX_PER_IP", 1), 1),
+        live_max_per_hour=max(_env_int("LIVE_MAX_PER_HOUR", 10), 1),
         evon_base_url=_env("EVON_BASE_URL", "https://api.vachana.ai/v1").rstrip("/"),
         evon_model=_env("EVON_MODEL", "evon-v3.3"),
         evon_timeout_s=_env_float("EVON_TIMEOUT_S", 60.0),
