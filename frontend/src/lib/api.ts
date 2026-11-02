@@ -15,6 +15,14 @@ import type {
   Acknowledgement,
 } from "./types";
 
+export const UNAUTHORIZED_EVENT = "aa:unauthorized";
+
+export interface Session {
+  authenticated: boolean;
+  username: string | null;
+  login_configured: boolean;
+}
+
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
     super(message);
@@ -29,6 +37,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError("Backend unreachable — is the API server running on port 8000?", 0);
   }
   if (!res.ok) {
+    // /api/auth answers for itself: a wrong password must show an error, not end a session.
+    if (res.status === 401 && !path.startsWith("/api/auth/")) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
     let detail = `${res.status} ${res.statusText}`;
     try {
       const body = await res.json();
@@ -55,6 +65,9 @@ export function qs(params: Record<string, string | number | boolean | undefined 
 }
 
 export const api = {
+  session: () => request<Session>("/api/auth/me"),
+  login: (username: string, password: string) => request<Session>("/api/auth/login", json({ username, password })),
+  logout: () => request<Session>("/api/auth/logout", { method: "POST" }),
   health: () => request<{ status: string; worker_queue: number; providers: ProviderStatus }>("/api/health"),
   stats: () => request<Stats>("/api/dashboard/stats"),
   reports: (params: Record<string, string | number | boolean | undefined> = {}) =>

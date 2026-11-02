@@ -42,7 +42,10 @@ mcp = FastMCP(
 
 
 def _client() -> httpx.Client:
-    return httpx.Client(base_url=BASE_URL, timeout=30)
+    # The API needs a login for most routes. API_TOKEN in the backend's .env must match this value.
+    token = os.environ.get("AAPDA_API_TOKEN", "")
+    headers = {"Authorization": f"Bearer {token}"} if token else None
+    return httpx.Client(base_url=BASE_URL, timeout=30, headers=headers)
 
 
 def _ok(resp: httpx.Response) -> dict[str, Any]:

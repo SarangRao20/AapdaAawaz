@@ -17,7 +17,8 @@ cat > "$DIR/claude_desktop_config.json" <<EOF
       "command": "$DIR/venv/bin/python",
       "args": ["$DIR/server.py"],
       "env": {
-        "AAPDA_API_URL": "http://localhost:8000"
+        "AAPDA_API_URL": "http://localhost:8000",
+        "AAPDA_API_TOKEN": "<same value as API_TOKEN in the backend .env>"
       }
     }
   }

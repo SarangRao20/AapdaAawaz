@@ -89,6 +89,13 @@ class Settings:
     telegram_followup_max_attempts: int
     telegram_voice_replies: bool
 
+    # Dashboard login (see app/auth.py). No password means nobody can log in.
+    admin_username: str
+    admin_password: str = field(repr=False)
+    session_secret: str = field(repr=False)
+    api_token: str = field(repr=False)
+    cookie_secure: bool
+
     @property
     def gnani_key_configured(self) -> bool:
         return bool(self.gnani_api_key)
@@ -148,6 +155,11 @@ def load_settings() -> Settings:
         telegram_followup_interval_s=max(_env_int("TELEGRAM_FOLLOWUP_INTERVAL_S", 120), 10),
         telegram_followup_max_attempts=max(_env_int("TELEGRAM_FOLLOWUP_MAX_ATTEMPTS", 3), 1),
         telegram_voice_replies=_env_bool("TELEGRAM_VOICE_REPLIES", True),
+        admin_username=_env("ADMIN_USERNAME", "admin"),
+        admin_password=_env("ADMIN_PASSWORD"),
+        session_secret=_env("SESSION_SECRET"),
+        api_token=_env("API_TOKEN"),
+        cookie_secure=_env_bool("COOKIE_SECURE", False),
     )
 
 

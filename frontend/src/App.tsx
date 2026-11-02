@@ -5,6 +5,7 @@ import {
   CornerDownLeft,
   Keyboard,
   LayoutDashboard,
+  LogOut,
   Mic,
   Moon,
   Search,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { AuthProvider, RequireAuth, useAuth } from "./lib/auth";
 import { api } from "./lib/api";
 import { cn } from "./lib/cn";
 import { useI18n, I18nProvider, type Locale } from './lib/i18n';
@@ -26,6 +28,8 @@ import { useIncidentAlerts } from "./lib/alerts";
 import { AlertToasts } from "./components/AlertToasts";
 import { CommandCenter } from "./pages/CommandCenter";
 import { JourneyPage } from "./pages/Journey";
+import { Landing } from "./pages/Landing";
+import { Login } from "./pages/Login";
 import { Evaluation } from "./pages/Evaluation";
 import { IncidentInvestigation } from "./pages/IncidentInvestigation";
 import { Reports } from "./pages/Reports";
@@ -97,7 +101,7 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
 }
 
 const NAV = [
-  { to: "/", label: "New Call", hint: "Record a voice report and process it", icon: Mic, end: true },
+  { to: "/call", label: "New Call", hint: "Record a voice report and process it", icon: Mic, end: true },
   { to: "/live", label: "Situation Room", hint: "Live map, alerts and active incidents", icon: LayoutDashboard },
   { to: "/reports", label: "Reports", hint: "Every report received, including Telegram", icon: Inbox },
   { to: "/settings", label: "Settings", hint: "API providers and thresholds", icon: SettingsIcon },
@@ -321,6 +325,7 @@ function GnaniLogo({ size = 16 }: { size?: number }) {
 function Sidebar({ collapsed, setCollapsed, openShortcuts, dark, toggleTheme }: { collapsed: boolean; setCollapsed: (v: boolean) => void; openShortcuts: () => void; dark: boolean; toggleTheme: () => void }) {
   const stats = usePoll(api.stats, 5000);
   const health = usePoll(api.health, 10000);
+  const { username, logout } = useAuth();
   const reviewCount = (stats.data?.incidents_needing_review ?? 0) + (stats.data?.possible_duplicates_pending ?? 0);
   const badges: Record<string, number> = { "/live": reviewCount };
 
@@ -399,6 +404,15 @@ function Sidebar({ collapsed, setCollapsed, openShortcuts, dark, toggleTheme }: 
         )}
         <LangToggle collapsed={collapsed} />
         <ConnectionPill collapsed={collapsed} />
+        <button
+          onClick={() => void logout()}
+          title={collapsed ? "Log out" : undefined}
+          aria-label="Log out"
+          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg px-2 text-2xs text-ink-3 transition-colors hover:bg-white/5 hover:text-ink"
+        >
+          <LogOut className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {!collapsed && <span className="truncate">Log out{username ? ` (${username})` : ""}</span>}
+        </button>
         <div className="flex gap-1">
           <button
             onClick={toggleTheme}
@@ -431,6 +445,7 @@ function Sidebar({ collapsed, setCollapsed, openShortcuts, dark, toggleTheme }: 
 }
 
 function MobileNav() {
+  const { logout } = useAuth();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-[1000] flex justify-around border-t border-white/[0.06] bg-bg/90 px-1 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur-xl md:hidden" aria-label="Main">
       {NAV.map((n) => (
@@ -439,11 +454,15 @@ function MobileNav() {
           {n.label.split(" ")[0]}
         </NavLink>
       ))}
+      <button onClick={() => void logout()} className="flex flex-1 flex-col items-center gap-1 py-2 text-[10px] text-ink-3">
+        <LogOut className="h-5 w-5" aria-hidden />
+        Log out
+      </button>
     </nav>
   );
 }
 
-export default function App() {
+function DashboardShell({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => void }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -454,7 +473,6 @@ export default function App() {
   });
   const [palette, setPalette] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
-  const { dark, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
   const urgent = usePoll(() => api.incidents({ priority: "critical,high", limit: 100 }), 3000);
   const { alerts, dismiss } = useIncidentAlerts(urgent.data?.items);
@@ -501,7 +519,7 @@ export default function App() {
             <>
               <motion.div key={section} variants={pageVariants} initial="initial" animate="enter">
                 <Routes location={location}>
-                  <Route path="/" element={<JourneyPage />} />
+                  <Route path="/call" element={<JourneyPage />} />
                   <Route path="/live" element={<CommandCenter />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/incidents" element={<IncidentInvestigation />} />
@@ -530,5 +548,27 @@ export default function App() {
       <ShortcutsModal open={shortcuts} onClose={() => setShortcuts(false)} />
       </>
     </I18nProvider>
+  );
+}
+
+
+export default function App() {
+  // Held here so the landing and login pages follow the saved theme as well.
+  const { dark, toggle } = useTheme();
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="*"
+          element={
+            <RequireAuth>
+              <DashboardShell dark={dark} toggleTheme={toggle} />
+            </RequireAuth>
+          }
+        />
+      </Routes>
+    </AuthProvider>
   );
 }

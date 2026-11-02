@@ -14,7 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api import incidents, reports, system
+from . import auth as auth_rules
+from .api import auth, incidents, reports, system
 from .config import settings
 from .db import init_db
 from .services.telegram_bot import telegram_runner
@@ -34,6 +35,8 @@ async def lifespan(_app: FastAPI):
     worker.start()
     telegram_runner.start()
     log.info("started; gnani key configured=%s", settings.gnani_key_configured)
+    if not auth_rules.login_configured():
+        log.warning("ADMIN_PASSWORD is not set: nobody can log in to the dashboard")
     yield
     telegram_runner.stop()
     worker.stop()
@@ -46,6 +49,20 @@ app = FastAPI(
                 "It does not dispatch responders or contact emergency services.",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    # scope["path"] is exactly what the router matches, so the two cannot disagree.
+    path, method = request.scope["path"], request.method
+    request.state.authenticated = auth_rules.is_authenticated(request)
+    if (path.startswith("/api") and method != "OPTIONS" and not request.state.authenticated
+            and not auth_rules.is_public(method, path)):
+        return JSONResponse(status_code=401, content={"detail": "Log in to continue."})
+    return await call_next(request)
+
+
+# Added after require_login so it runs first and refusals keep their CORS headers.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -61,6 +78,7 @@ async def validation_handler(_req: Request, exc: RequestValidationError):
     return JSONResponse(status_code=422, content={"detail": summary, "errors": errors})
 
 
+app.include_router(auth.router)
 app.include_router(system.router)
 app.include_router(reports.router)
 app.include_router(incidents.router)

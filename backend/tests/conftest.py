@@ -5,6 +5,12 @@ import tempfile
 # Must be set before the app is imported (config is read at import time).
 os.environ["AAPDA_VAR_DIR"] = tempfile.mkdtemp(prefix="aapda-test-")
 os.environ["GNANI_API_KEY"] = ""
+ADMIN_PASSWORD = "test-admin-password"
+API_TOKEN = "test-api-token"
+os.environ["ADMIN_USERNAME"] = "admin"
+os.environ["ADMIN_PASSWORD"] = ADMIN_PASSWORD
+os.environ["API_TOKEN"] = API_TOKEN
+os.environ["COOKIE_SECURE"] = "false"
 # A real token in .env must never make the test app poll the real bot and take its messages.
 os.environ["TELEGRAM_BOT_TOKEN"] = ""
 os.environ["STT_PROVIDER"] = "mock"
@@ -28,6 +34,7 @@ def cfg():
 @pytest.fixture()
 def client():
     with TestClient(app) as c:
+        assert c.post("/api/auth/login", json={"username": "admin", "password": ADMIN_PASSWORD}).status_code == 200
         c.post("/api/demo/reset", json={})
         yield c
 
