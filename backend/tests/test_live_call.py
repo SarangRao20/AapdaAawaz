@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import contextmanager
+from dataclasses import replace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,10 +12,12 @@ from starlette.websockets import WebSocketDisconnect
 
 from app import models
 from app.api import live
+from app.config import settings
 from app.db import SessionLocal
 from app.main import app
 from app.providers.base import ProviderError
 from app.services import live_call as lc
+from app.services.live_guard import LiveGuard
 
 
 class FakeStream:
@@ -288,3 +292,103 @@ def test_reply_time_uses_prismas_own_milliseconds(call):
         final = read_until(ws, "done")
     metrics = next(m for m in final if m["type"] == "metrics")
     assert metrics["prisma_ms"] == 457 and metrics["total_ms"] == 457 + metrics["reply_ms"] and metrics["total_ms"] < 60000
+
+
+# ---- the public caller-app socket ---------------------------------------------------------------
+
+@pytest.fixture()
+def public(call, monkeypatch):
+    """The same fake Gnani streams, but as an anonymous caller app would connect."""
+    monkeypatch.setattr(live, "settings", replace(settings, live_public=True))
+    fresh = LiveGuard(max_concurrent=6, max_per_ip=1, max_per_hour=10)
+    monkeypatch.setattr(live, "guard", fresh)
+    return TestClient(app), fresh
+
+
+@contextmanager
+def open_call(guest):
+    """A public call that is already connected and listening."""
+    with guest.websocket_connect("/api/live/call") as ws:
+        ws.send_text(json.dumps({"type": "start", "language": "en"}))
+        until_listening(ws)
+        yield ws
+
+
+def test_public_calls_are_off_by_default(call):
+    assert settings.live_public is False
+    with pytest.raises(WebSocketDisconnect):
+        with TestClient(app).websocket_connect("/api/live/call"):
+            pass
+
+
+def test_a_public_caller_gets_a_full_call(public):
+    guest, _ = public
+    with open_call(guest) as ws:
+        say(ws, "Flood in Nandwadi, 25 people are stuck")
+        final = read_until(ws, "done")
+    report = report_of(final)
+    assert report.source == "live_call" and report.status == "processed"
+
+
+def test_one_call_at_a_time_per_device(public):
+    guest, guard = public
+    with open_call(guest) as first:
+        with guest.websocket_connect("/api/live/call") as second:
+            message = second.receive_json()
+            assert message["type"] == "error" and "already open" in message["message"]
+        first.send_text(json.dumps({"type": "end"}))
+        read_until(first, "done")
+    assert guard.snapshot()["active"] == 0
+
+
+def test_the_slot_is_released_after_a_call(public):
+    guest, guard = public
+    with open_call(guest) as ws:
+        ws.send_text(json.dumps({"type": "end"}))
+        read_until(ws, "done")
+    assert guard.snapshot()["active"] == 0
+    # The next call from the same address is accepted, so a dropped call never locks the app out.
+    with open_call(guest) as ws:
+        ws.send_text(json.dumps({"type": "end"}))
+        read_until(ws, "done")
+
+
+def test_global_capacity_refuses_extra_calls(call, monkeypatch):
+    monkeypatch.setattr(live, "settings", replace(settings, live_public=True))
+    monkeypatch.setattr(live, "guard", LiveGuard(max_concurrent=1, max_per_ip=5, max_per_hour=10))
+    guest = TestClient(app)
+    with open_call(guest) as first:
+        with guest.websocket_connect("/api/live/call") as second:
+            message = second.receive_json()
+            assert message["type"] == "error" and "busy" in message["message"].lower()
+        first.send_text(json.dumps({"type": "end"}))
+        read_until(first, "done")
+
+
+def test_guard_enforces_a_rolling_hourly_quota():
+    now = [1_000.0]
+    guard = LiveGuard(max_concurrent=10, max_per_ip=10, max_per_hour=2, clock=lambda: now[0])
+    assert guard.allow("a") is None
+    guard.release("a")
+    assert guard.allow("a") is None
+    guard.release("a")
+    assert guard.allow("a") == "hourly_limit"
+    now[0] += 3_601
+    assert guard.allow("a") is None
+
+
+def test_a_foreign_website_cannot_start_a_public_call(public):
+    guest, guard = public
+    with guest.websocket_connect("/api/live/call", headers={"origin": "https://evil.example"}) as ws:
+        message = ws.receive_json()
+        assert message["type"] == "error" and "update" in message["message"]
+    assert guard.snapshot()["active"] == 0
+
+
+def test_the_caller_app_origin_is_allowed(public):
+    guest, _ = public
+    with guest.websocket_connect("/api/live/call", headers={"origin": "http://localhost"}) as ws:
+        ws.send_text(json.dumps({"type": "start", "language": "en"}))
+        until_listening(ws)
+        ws.send_text(json.dumps({"type": "end"}))
+        read_until(ws, "done")

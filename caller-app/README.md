@@ -27,6 +27,19 @@ the phone itself.
 `http://localhost` — still a secure context, so `getUserMedia` (microphone) works,
 and plain-HTTP API calls are not blocked as mixed content.
 
+## Awaaz Live
+
+The home screen's **Awaaz Live** button opens a realtime voice call. The microphone streams
+16 kHz PCM over `/api/live/call`, Gnani Prisma transcribes it, and Gnani Timbre streams the reply
+back to the speaker. It reuses the dashboard's AudioWorklet client, with a ScriptProcessor
+fallback for older WebViews. `VITE_API_URL` is used for both HTTP and the WebSocket (`http` becomes
+`ws`).
+
+A public live call spends Gnani credits and has no login, so the backend only enables it when
+`LIVE_PUBLIC=true`, and caps it with `LIVE_MAX_CONCURRENT`, `LIVE_MAX_PER_IP` and
+`LIVE_MAX_PER_HOUR`. The microphone permission is declared in the Android manifest, so the
+WebView's `getUserMedia` prompt appears on first use.
+
 ---
 
 # React + TypeScript + Vite

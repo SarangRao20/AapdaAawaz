@@ -27,6 +27,7 @@ from ..config import settings
 from ..providers.base import ProviderError, ProviderUnavailable
 from ..providers.gnani_stream import SAMPLE_RATE, PrismaStream, speak_stream
 from ..services.live_call import CallBrain, Turn, calls, save_call_audio
+from ..services.live_guard import LiveGuard
 
 log = logging.getLogger("aapda.live")
 router = APIRouter(prefix="/api/live", tags=["live call"])
@@ -37,11 +38,22 @@ SILENCE_S = 12.0  # ask again after this much quiet
 MAX_CALL_S = 300.0  # a call is capped so a forgotten tab can't keep spending credits
 MAX_CALLER_AUDIO_BYTES = 9 * 1024 * 1024  # inside the 10 MB upload limit
 PLAYBACK_GRACE_S = 3.0  # how long past the audio's length to wait for playback_done
+FIRST_MESSAGE_S = 10.0  # an idle public socket must not hold a capacity slot
 TAG = re.compile(r"<[a-z ]+>\s*")
 
 # Replaced in tests.
 stream_factory = PrismaStream
 speak = speak_stream
+guard = LiveGuard(settings.live_max_concurrent, settings.live_max_per_ip, settings.live_max_per_hour)
+
+# A public caller gets a readable reason before the socket closes, not a silent 403.
+REFUSALS = {
+    "busy": "Awaaz Live is busy right now. Please try again in a minute.",
+    "already_calling": "A call is already open from this device. End it before starting another.",
+    "hourly_limit": "This device has started too many calls. Please try again later.",
+}
+# The caller APK's WebView is http://localhost. Dashboard origins come from CORS_ORIGINS.
+APP_ORIGINS = {"http://localhost", "https://localhost", "capacitor://localhost"}
 
 
 def prisma_latency_ms(event: dict) -> float | None:
@@ -270,24 +282,58 @@ class LiveSession:
                 return
 
 
+async def _refuse(ws: WebSocket, message: str, code: int = 4429) -> None:
+    """Accept first so the caller app can show the reason instead of a generic handshake failure."""
+    await ws.accept()
+    with contextlib.suppress(Exception):
+        await ws.send_json({"type": "error", "message": message})
+        await ws.close(code=code)
+
+
+async def _admit(ws: WebSocket) -> tuple[bool, str | None]:
+    """Who may start a call. Returns (allowed, address to release), and closes refused sockets."""
+    # HTTP middleware doesn't run on WebSockets, and a call spends credits and stores a voice, so check here.
+    if is_authenticated(ws):
+        return True, None
+    if not settings.live_public:
+        await ws.close(code=4401)
+        return False, None
+    # A browser on another site could otherwise spend our credits from its visitors' addresses.
+    origin = ws.headers.get("origin")
+    if origin and origin not in APP_ORIGINS and origin not in settings.cors_origins:
+        log.info("public live call refused for origin %s", origin)
+        await _refuse(ws, "This app version is not allowed to start a call. Please update it.", code=4403)
+        return False, None
+    address = ws.client.host if ws.client else "unknown"
+    refusal = guard.allow(address)
+    if refusal is None:
+        return True, address
+    log.info("public live call refused for %s: %s", address, refusal)
+    await _refuse(ws, REFUSALS.get(refusal, "Awaaz Live is unavailable."))
+    return False, None
+
+
 @router.websocket("/call")
 async def live_call(ws: WebSocket):
-    # HTTP middleware doesn't run on WebSockets, and a call spends credits and stores a voice, so check here.
-    if not is_authenticated(ws):
-        await ws.close(code=4401)
+    allowed, address = await _admit(ws)
+    if not allowed:
         return
-    await ws.accept()
     try:
-        first = json.loads(await ws.receive_text())
-    except (ValueError, WebSocketDisconnect):
-        await ws.close(code=1008)
-        return
-    language = first.get("language")
-    if first.get("type") != "start" or language not in LANGUAGES:
-        await ws.send_json({"type": "error", "message": "Choose hi, mr, en or mixed."})
-        await ws.close(code=1008)
-        return
-    await LiveSession(ws, language).run()
+        await ws.accept()
+        try:
+            first = json.loads(await asyncio.wait_for(ws.receive_text(), FIRST_MESSAGE_S))
+        except (ValueError, WebSocketDisconnect, TimeoutError):
+            await ws.close(code=1008)
+            return
+        language = first.get("language")
+        if first.get("type") != "start" or language not in LANGUAGES:
+            await ws.send_json({"type": "error", "message": "Choose hi, mr, en or mixed."})
+            await ws.close(code=1008)
+            return
+        await LiveSession(ws, language).run()
+    finally:
+        if address:
+            guard.release(address)
 
 
 @router.get("/calls")
