@@ -48,6 +48,15 @@
 
 ## Deduplication and priority
 
+* **Unclear reports are raised, not measured.** Reports with no danger, need or urgency identified, or with
+  a low-quality transcript, rank at least `medium` (`priority.unclear_floor`) unless the caller says it is
+  not urgent or people are safe. This keeps them above "low" but below real critical reports; review them
+  by listening to the audio.
+* **Possible misheard villages are not pinned.** A word one character away from a reference village name
+  is recorded as a candidate that a person must confirm, with no coordinates.
+* **Number words are partial.** English compounds work ("twenty five", "one hundred and fifty"). Hindi and
+  Marathi words outside the lexicon (for example छब्बीस) leave the count unknown rather than wrong.
+
 * Weights and thresholds are hand-set on synthetic data; not validated operationally or clinically.
 * Matching compares a report with incident aggregates; a long chain of partially-overlapping reports
   could drift. Re-processing a report re-matches it but does not re-cluster everything.

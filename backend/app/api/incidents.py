@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api", tags=["incidents"])
 
 VERIFICATION = {
     "verified": {"human_verified"},
-    "reference": {"simulated_reference"},
+    "reference": {"simulated_reference", "caller_gps"},
     "ungrounded": {"ambiguous", "caller_stated_unmapped", "unknown"},
 }
 SORTS = {"priority", "recent", "reports", "confidence"}

@@ -34,7 +34,7 @@ function markerIcon(i: Incident, selected: boolean): L.DivIcon {
 function tooltipHtml(i: Incident): string {
   return `<div class="aa-tt"><b>${escapeHtml(i.id)}</b> · <span style="color:${PRIORITY_COLOR[i.priority_label]}">${i.priority_label.toUpperCase()}</span><br/>
     ${escapeHtml(locationText(i))}<br/>People: ${escapeHtml(peopleText(i))} · Reports: ${i.report_count}<br/>
-    <i>${i.location_status === "human_verified" ? "Verified location" : "Reference location (unverified)"}</i></div>`;
+    <i>${i.location_status === "caller_gps" ? "GPS shared by caller (unverified)" : i.location_status === "human_verified" ? "Verified location" : "Reference location (unverified)"}</i></div>`;
 }
 
 export function IncidentMap({
@@ -145,6 +145,16 @@ export function IncidentMap({
     c.addLayers(markers);
   }, [incidents, selectedId]);
 
+  // A caller's GPS can be far from the reference villages the map starts on.
+  const focus = incidents.find((i) => i.id === selectedId && isMappable(i));
+  const focusLat = focus?.latitude;
+  const focusLon = focus?.longitude;
+  useEffect(() => {
+    const m = map.current;
+    if (!m || focusLat == null || focusLon == null) return;
+    if (!m.getBounds().contains([focusLat, focusLon])) m.setView([focusLat, focusLon], Math.max(m.getZoom(), 13));
+  }, [focusLat, focusLon, places]);
+
   return (
     <div className={`glass relative overflow-hidden rounded-2xl ${className ?? ""}`}>
       <div ref={el} className="offline-basemap h-full w-full" aria-label="Incident map" />
@@ -153,7 +163,7 @@ export function IncidentMap({
       </div>
       {compactLegend ? (
         <div className="absolute bottom-2 left-2 z-[500] rounded-lg border border-white/10 bg-bg/80 px-2 py-1 backdrop-blur text-2xs text-ink-2">
-          Dashed ring = reference location (unverified) · solid green = verified
+          Dashed ring = reference or caller GPS (unverified) · solid green = verified
         </div>
       ) : (
       <div className="absolute bottom-2 left-2 z-[500] rounded-xl border border-white/10 bg-bg/80 px-3 py-2.5 backdrop-blur text-2xs text-ink-2">

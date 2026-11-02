@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -24,7 +24,7 @@ class Report(Base):
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    # synthetic_fixture | upload | recording | manual_text
+    # synthetic_fixture | upload | recording | manual_text | telegram
     source: Mapped[str] = mapped_column(String(32))
     is_synthetic: Mapped[bool] = mapped_column(Boolean, default=False)
     synthetic_label: Mapped[str | None] = mapped_column(String(200))
@@ -68,7 +68,13 @@ class Report(Base):
     follow_up_needed: Mapped[bool] = mapped_column(Boolean, default=False)
     follow_up_questions: Mapped[Any | None] = mapped_column(JSON)  # list[str]
     follow_up_missing_fields: Mapped[Any | None] = mapped_column(JSON)  # list[str]
-    follow_up_status: Mapped[str] = mapped_column(String(20), default="none")  # none | pending | answered
+    # none | pending | answered | unanswered
+    follow_up_status: Mapped[str] = mapped_column(String(20), default="none")
+
+    # Real coordinates the caller chose to share (Telegram). Kept apart from the simulated gazetteer.
+    caller_latitude: Mapped[float | None] = mapped_column(Float)
+    caller_longitude: Mapped[float | None] = mapped_column(Float)
+    caller_location_accuracy_m: Mapped[float | None] = mapped_column(Float)
 
     audio_files: Mapped[list["AudioFile"]] = relationship(back_populates="report", cascade="all, delete-orphan")
     jobs: Mapped[list["ProcessingJob"]] = relationship(back_populates="report", cascade="all, delete-orphan",
@@ -234,6 +240,29 @@ class Acknowledgement(Base):
     status: Mapped[str] = mapped_column(String(20))  # text_only | audio_ready | audio_failed
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class TelegramConversation(Base):
+    """One report being collected from one Telegram chat. A new report starts a new row."""
+    __tablename__ = "telegram_conversations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    report_id: Mapped[str | None] = mapped_column(ForeignKey("reports.id"), index=True)
+    # new | needs_text | collecting | complete | incomplete
+    state: Mapped[str] = mapped_column(String(20), default="new", index=True)
+    language: Mapped[str] = mapped_column(String(16), default="hi")
+    language_locked: Mapped[bool] = mapped_column(Boolean, default=False)
+    pending_field: Mapped[str | None] = mapped_column(String(40))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_fields: Mapped[Any | None] = mapped_column(JSON)
+    next_followup_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Location shared before the first description; moved onto the report when it is created.
+    pending_latitude: Mapped[float | None] = mapped_column(Float)
+    pending_longitude: Mapped[float | None] = mapped_column(Float)
+    pending_accuracy_m: Mapped[float | None] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class AppSetting(Base):

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isMappable, peopleText, pct, sortIncidents, timeAgo } from "./format";
+import { isMappable, locationText, peopleText, pct, sortIncidents, timeAgo } from "./format";
 import type { Incident } from "./types";
 
 const base = {
@@ -31,6 +31,8 @@ describe("isMappable", () => {
   it("never maps ungrounded incidents even if coordinates are present", () => {
     expect(isMappable(base)).toBe(true);
     expect(isMappable({ ...base, location_status: "ambiguous" })).toBe(false);
+    expect(isMappable({ ...base, location_status: "caller_gps" })).toBe(true);
+    expect(locationText({ ...base, location_status: "caller_gps", location: { place_name: null } as never })).toBe("GPS position shared by the caller");
     expect(isMappable({ ...base, latitude: null })).toBe(false);
   });
 });

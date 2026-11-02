@@ -56,6 +56,16 @@ def _location(members: list[Member], overrides: dict, contradictions: list[str])
         out["verified_by"] = ov.get("verified_by")
         return {"status": "human_verified", "lat": lat, "lon": lon, "location": out}
 
+    with_gps = [m for m in members if m.ext.get("caller_gps")]
+    if with_gps:
+        latest = max(with_gps, key=lambda m: m.received_at)
+        gps = latest.ext["caller_gps"]
+        named = latest.ext["location"]
+        out = dict(base, place_name=named.get("place_name") if named.get("status") in ("grounded", "unmapped") else None,
+                   place_id=named.get("place_id") if named.get("status") == "grounded" else None,
+                   landmark=named.get("landmark"), coordinate_source="caller_gps", gps_accuracy_m=gps.get("accuracy_m"))
+        return {"status": "caller_gps", "lat": gps["latitude"], "lon": gps["longitude"], "location": out}
+
     grounded = Counter(m.ext["location"]["place_id"] for m in members if m.ext["location"].get("status") == "grounded")
     if len(grounded) == 1:
         pid = next(iter(grounded))
@@ -159,11 +169,12 @@ def aggregate(members: list[Member], overrides: dict, cfg: dict) -> dict:
         contradictions.append("Some reports say people are safe/evacuated; others describe a threat to life")
     languages = sorted({e.get("language") for e in exts if e.get("language") and e.get("language") != "unknown"})
 
-    grounded = loc["status"] in ("simulated_reference", "human_verified")
+    grounded = loc["status"] in ("simulated_reference", "human_verified", "caller_gps")
     feats = prio.SeverityFeatures(dangers=set(dangers), needs=set(needs), medical_emergency=medical,
                                   critical_medication=crit_med, vulnerable=set(vulnerable),
                                   people_count=people_count, caller_urgency=urgency,
-                                  status_claims=set(status_claims), location_grounded=grounded)
+                                  status_claims=set(status_claims), location_grounded=grounded,
+                                  transcript_low_quality=all(e.get("transcript_quality") == "low" for e in exts))
     pr = prio.score(feats, cfg, overrides.get("priority_label"))
 
     low_q = sum(1 for e in exts if e.get("transcript_quality") == "low")
@@ -174,15 +185,16 @@ def aggregate(members: list[Member], overrides: dict, cfg: dict) -> dict:
     profile = Profile(
         place_id=loc["location"].get("place_id") if grounded else None,
         location_status=("verified" if loc["status"] == "human_verified"
-                         else "grounded" if loc["status"] == "simulated_reference"
+                         else "grounded" if loc["status"] in ("simulated_reference", "caller_gps")
                          else "unmapped" if loc["status"] == "caller_stated_unmapped" else "ambiguous"
                          if loc["status"] == "ambiguous" else "missing"),
         candidates=set(loc["location"].get("candidates") or []),
         unmapped_name=loc["location"].get("unmapped_name"),
         landmark_ids={loc["location"]["landmark_id"]} if loc["location"].get("landmark_id") else set(),
         landmark_types=set(loc["location"].get("landmark_types") or []),
-        coords=((loc["lat"], loc["lon"]) if loc["status"] == "human_verified" and loc["lat"] is not None
-                and not loc["location"].get("place_id") else None),
+        coords=((loc["lat"], loc["lon"]) if loc["status"] == "caller_gps" or (
+            loc["status"] == "human_verified" and loc["lat"] is not None and not loc["location"].get("place_id"))
+            else None),
         disaster_type=disaster,
         facts=set().union(*(facts_of(e) for e in exts)) if exts else set(),
         people_counts=[people_count] if people_count is not None else [],
@@ -227,7 +239,7 @@ def aggregate(members: list[Member], overrides: dict, cfg: dict) -> dict:
 
 def _info_confidence(lstatus: str, people_count, counts, overrides, n, languages, low_q, contradictions) -> dict:
     basis: list[str] = []
-    loc_level = {"human_verified": "verified", "simulated_reference": "reference_match",
+    loc_level = {"human_verified": "verified", "simulated_reference": "reference_match", "caller_gps": "caller_gps",
                  "caller_stated_unmapped": "unmapped", "ambiguous": "ambiguous"}.get(lstatus, "unknown")
     if overrides.get("people_count") is not None:
         ppl = "verified"
@@ -247,7 +259,8 @@ def _info_confidence(lstatus: str, people_count, counts, overrides, n, languages
         basis.append("number of people unknown")
     if basis and (loc_level in ("ambiguous", "unknown", "unmapped") or contradictions or (n and low_q == n)):
         overall = "low"
-    elif loc_level in ("verified", "reference_match") and ppl in ("stated", "verified") and (n >= 2 or loc_level == "verified"):
+    elif (loc_level in ("verified", "reference_match", "caller_gps") and ppl in ("stated", "verified")
+          and (n >= 2 or loc_level == "verified")):
         overall = "high"
         basis.append(f"grounded location, stated count, {n} corroborating report(s)")
     else:
@@ -261,7 +274,9 @@ def _info_confidence(lstatus: str, people_count, counts, overrides, n, languages
 
 def summarize(f: dict) -> str:
     loc = f["location"] or {}
-    if f["location_status"] in ("simulated_reference", "human_verified") and loc.get("place_name"):
+    if f["location_status"] == "caller_gps" and not loc.get("place_name"):
+        where = "the caller's shared GPS position"
+    elif f["location_status"] in ("simulated_reference", "human_verified", "caller_gps") and loc.get("place_name"):
         where = loc["place_name"] + (f" ({loc['landmark']})" if loc.get("landmark") else "")
     elif f["location_status"] == "caller_stated_unmapped":
         where = f"'{loc.get('place_name')}' (unmapped)"
@@ -297,13 +312,17 @@ def recommend(f: dict) -> str:
     """Suggested next HUMAN action. Never claims that help has been or will be dispatched."""
     steps: list[str] = []
     label = f["priority_label"]
-    if f["location_status"] not in ("simulated_reference", "human_verified"):
+    if f["location_status"] == "caller_gps":
+        steps.append("The map shows the GPS position the caller shared, which may not be the incident site; confirm it.")
+    elif f["location_status"] not in ("simulated_reference", "human_verified"):
         steps.append("Verify the location (call back / local contacts) before routing any response.")
     elif f["location_status"] == "simulated_reference":
         steps.append("Confirm the exact spot; the map shows the simulated village reference point.")
     if f["contradictions"]:
         steps.append("Resolve conflicting reports before relying on counts or status.")
-    if label == "critical":
+    if f["priority_breakdown"].get("unclear_floor_applied"):
+        steps.append("Listen to the recording or call back: severity could not be judged from the transcript.")
+    elif label == "critical":
         steps.append("Escalate to the duty officer now for human assessment.")
     elif label == "high":
         steps.append("Review promptly and confirm details with the caller.")

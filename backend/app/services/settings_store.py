@@ -75,6 +75,11 @@ DEFAULTS: dict[str, Any] = {
         # A report/incident where callers say everyone is safe (and nothing contradicts it)
         # is capped at this label.
         "safe_status_cap": "medium",
+        # A report we could not understand must not rank as "not urgent". Reports with no danger,
+        # need or urgency identified (even if people are mentioned), or with a low-quality
+        # transcript, are raised to at least this label unless the caller says it is not urgent
+        # or people are safe. "low" turns this off.
+        "unclear_floor": "medium",
     },
     "providers": {"stt": "auto", "tts": "auto"},
 }
@@ -127,6 +132,8 @@ def validate_update(section: str, values: dict) -> dict:
                 raise ValueError(f"priority weight {k} must be a non-negative number")
         if merged["safe_status_cap"] not in ("critical", "high", "medium", "low"):
             raise ValueError("priority.safe_status_cap must be a priority label")
+        if merged["unclear_floor"] not in ("high", "medium", "low"):
+            raise ValueError("priority.unclear_floor must be one of high, medium, low")
     elif section == "providers":
         if merged["stt"] not in _ALLOWED_STT:
             raise ValueError(f"providers.stt must be one of {sorted(_ALLOWED_STT)}")

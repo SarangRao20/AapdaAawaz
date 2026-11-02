@@ -13,6 +13,7 @@ from ..schemas import InjectRequest, ResetRequest, SeedRequest, SettingsUpdate
 from ..services import demo, evaluation, stats
 from ..services.gazetteer import load_gazetteer
 from ..services.settings_store import get_config, update_config
+from ..services.telegram_bot import telegram_runner
 from ..services.worker import worker
 from .serializers import audit_view, iso, report_detail
 
@@ -24,7 +25,8 @@ def health(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     cfg = get_config(db)
     return {"status": "ok", "database": "ok", "schema_version": SCHEMA_VERSION, "worker_queue": worker.pending(),
-            "providers": provider_status(cfg["providers"]["stt"], cfg["providers"]["tts"])}
+            "providers": provider_status(cfg["providers"]["stt"], cfg["providers"]["tts"]),
+            "telegram": telegram_runner.status()}
 
 
 @router.get("/dashboard/stats")

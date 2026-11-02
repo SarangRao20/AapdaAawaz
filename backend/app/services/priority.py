@@ -27,6 +27,7 @@ class SeverityFeatures:
     caller_urgency: str = "unknown"
     status_claims: set[str] = field(default_factory=set)
     location_grounded: bool = False
+    transcript_low_quality: bool = False
 
 
 def features_from_extraction(ext: dict) -> SeverityFeatures:
@@ -40,7 +41,8 @@ def features_from_extraction(ext: dict) -> SeverityFeatures:
         people_count=(ext.get("people_affected") or {}).get("count"),
         caller_urgency=ext.get("urgency") or "unknown",
         status_claims=set(ext.get("status_claims") or []),
-        location_grounded=(ext.get("location") or {}).get("status") == "grounded",
+        location_grounded=bool(ext.get("caller_gps")) or (ext.get("location") or {}).get("status") == "grounded",
+        transcript_low_quality=ext.get("transcript_quality") == "low",
     )
 
 
@@ -119,6 +121,19 @@ def score(f: SeverityFeatures, cfg: dict, override_label: str | None = None) -> 
             notes.append(f"Capped at '{cap}': callers report people are currently safe/evacuated")
             label = cap
 
+    # "We could not understand this" must not look like "this is not urgent". The score stays
+    # as computed, so the raise is visible instead of pretending severity was measured.
+    floor = cfg["priority"]["unclear_floor"]
+    # Who is present (elderly, a head count) is not knowing what is happening, so those don't count
+    # as understanding. This matches the gate's "urgency_unclear" check.
+    situation_known = bool(f.dangers or f.needs or f.medical_emergency or f.critical_medication
+                           or f.caller_urgency != "unknown")
+    unclear = (not situation_known or f.transcript_low_quality) and not says_safe and f.caller_urgency != "low"
+    unclear_floor_applied = unclear and LABEL_RANK[label] < LABEL_RANK[floor]
+    if unclear_floor_applied:
+        notes.append(f"Raised to '{floor}': the report could not be understood well enough to judge severity")
+        label = floor
+
     missing: list[str] = []
     if not f.location_grounded:
         missing.append("Location not grounded to a reference place")
@@ -141,6 +156,7 @@ def score(f: SeverityFeatures, cfg: dict, override_label: str | None = None) -> 
         "factors": sorted(factors, key=lambda x: -x["points"]),
         "missing_info": missing,
         "notes": notes,
+        "unclear_floor_applied": unclear_floor_applied and not override_label,
         "thresholds": thresholds,
         "disclaimer": "Prototype decision-support score; not a validated triage or rescue-ordering algorithm.",
     }

@@ -5,7 +5,7 @@
   "state": "Maharashtra (simulated scenario)",
   "alias_syntax": "A trailing * means prefix match on a token (to allow Marathi/Hindi case suffixes such as -त, -मध्ये, -च्या). Without *, the token must match exactly. Multi-word aliases must match consecutive tokens.",
   "places": [
-    {"id": "P01", "name": "Nandwadi", "name_local": "नंदवाडी", "aliases": ["नंदवाडी*", "नंदवाड़ी*", "nandwadi", "nandvadi"], "latitude": 18.6402, "longitude": 73.5205},
+    {"id": "P01", "name": "Nandwadi", "name_local": "नंदवाडी", "aliases": ["नंदवाडी*", "नंदवाड़ी*", "नांदवाडी*", "nandwadi", "nandvadi"], "latitude": 18.6402, "longitude": 73.5205},
     {"id": "P02", "name": "Kothale", "name_local": "कोठाळे", "aliases": ["कोठाळे*", "कोठाळ्या*", "कोठाले*", "kothale", "kothaale", "kothle"], "latitude": 18.6121, "longitude": 73.5483},
     {"id": "P03", "name": "Ambeghat", "name_local": "आंबेघाट", "aliases": ["आंबेघाट*", "अंबेघाट*", "ambeghat", "ambe ghat"], "latitude": 18.5853, "longitude": 73.4952},
     {"id": "P04", "name": "Kanhavati Nagar", "name_local": "कान्हावती नगर", "aliases": ["कान्हावती*", "kanhavati", "kanhawati"], "latitude": 18.6551, "longitude": 73.5747},

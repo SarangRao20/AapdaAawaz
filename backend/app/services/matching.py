@@ -33,7 +33,7 @@ class Profile:
     unmapped_name: str | None = None
     landmark_ids: set[str] = field(default_factory=set)
     landmark_types: set[str] = field(default_factory=set)
-    coords: tuple[float, float] | None = None  # human-verified custom coordinates only
+    coords: tuple[float, float] | None = None  # dispatcher-verified or caller-shared GPS coordinates
     disaster_type: str = "unknown"
     facts: set[str] = field(default_factory=set)
     people_counts: list[int] = field(default_factory=list)
@@ -60,7 +60,9 @@ def report_profile(ext: dict, received_at: datetime, transcript: str | None) -> 
     loc = ext.get("location") or {}
     pa = ext.get("people_affected") or {}
     status = loc.get("status", "missing")
+    gps = ext.get("caller_gps")
     return Profile(
+        coords=(gps["latitude"], gps["longitude"]) if gps else None,
         place_id=loc.get("place_id") if status == "grounded" else None,
         location_status=status,
         candidates=set(loc.get("candidates") or []),
@@ -108,7 +110,20 @@ def score_pair(r: Profile, inc: Profile, incident_id: str, cfg: dict) -> MatchRe
         ev.append({"feature": feature, "points": round(w[feature] if points is None else points, 3), "detail": detail})
 
     # --- place -------------------------------------------------------------
-    if r.place_id and inc.place_id:
+    if r.coords and inc.coords:
+        km = haversine_km(*r.coords, *inc.coords)
+        if km <= d["coords_near_km"]:
+            add("coords_near", f"positions are {km:.2f} km apart")
+        elif km >= d["coords_far_km"]:
+            add("coords_far", f"positions are {km:.1f} km apart")
+    elif r.coords and inc.place_id and inc.place_id in load_gazetteer().places:
+        gp = load_gazetteer().places[inc.place_id]
+        km = haversine_km(*r.coords, gp.latitude, gp.longitude)
+        if km <= d["coords_near_km"]:
+            add("coords_near", f"caller's position is {km:.2f} km from {gp.name} reference point")
+        elif km >= d["coords_far_km"]:
+            add("coords_far", f"caller's position is {km:.1f} km from {gp.name} reference point")
+    elif r.place_id and inc.place_id:
         if r.place_id == inc.place_id:
             add("same_place", f"both name {_place_name(r.place_id)}")
         else:

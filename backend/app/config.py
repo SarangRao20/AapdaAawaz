@@ -81,6 +81,14 @@ class Settings:
     geocoding_enabled: bool     # GEOCODING_ENABLED — Nominatim/OSM geocode for unmapped places
     audio_preprocessing_enabled: bool  # AUDIO_PREPROCESSING — spectral gate + RMS normalise before STT
 
+    # Telegram intake (optional; the bot only starts when a token is set)
+    telegram_bot_token: str = field(repr=False)
+    telegram_api_base: str
+    telegram_allowed_chat_ids: frozenset[int]  # empty = anyone who finds the bot
+    telegram_followup_interval_s: int
+    telegram_followup_max_attempts: int
+    telegram_voice_replies: bool
+
     @property
     def gnani_key_configured(self) -> bool:
         return bool(self.gnani_api_key)
@@ -114,9 +122,10 @@ def load_settings() -> Settings:
         prisma_default_language=_env("PRISMA_DEFAULT_LANGUAGE", "hi-IN"),
         prisma_timeout_s=_env_float("PRISMA_TIMEOUT_S", 30.0),
         prisma_max_retries=_env_int("PRISMA_MAX_RETRIES", 3),
-        timbre_model=_env("TIMBRE_MODEL", "timbre-v3.0"),
+        timbre_model=_env("TIMBRE_MODEL", "timbre-v2.5"),
         # Voice names taken from the Gnani voice catalog (docs.gnani.ai/api/TTS/available-voices);
-        # each timbre-v3.0 voice has one preferred language code (see TIMBRE_LANGUAGE_CODES).
+        # these voices exist only on timbre-v2.5, each with one preferred language code (see
+        # TIMBRE_LANGUAGE_CODES). timbre-v3.0 has a different voice list and rejects them with HTTP 400.
         timbre_voices={
             "mr": _env("TIMBRE_VOICE_MR", "Ishaan"),
             "hi": _env("TIMBRE_VOICE_HI", "Nalini"),
@@ -132,6 +141,13 @@ def load_settings() -> Settings:
         evon_api_key=_env("EVON_API_KEY"),  # if set, used instead of gnani_api_key for Evon/Groq
         geocoding_enabled=_env_bool("GEOCODING_ENABLED", False),
         audio_preprocessing_enabled=_env_bool("AUDIO_PREPROCESSING", False),
+        telegram_bot_token=_env("TELEGRAM_BOT_TOKEN"),
+        telegram_api_base=_env("TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/"),
+        telegram_allowed_chat_ids=frozenset(
+            int(c) for c in _env("TELEGRAM_ALLOWED_CHAT_IDS").split(",") if c.strip().lstrip("-").isdigit()),
+        telegram_followup_interval_s=max(_env_int("TELEGRAM_FOLLOWUP_INTERVAL_S", 120), 10),
+        telegram_followup_max_attempts=max(_env_int("TELEGRAM_FOLLOWUP_MAX_ATTEMPTS", 3), 1),
+        telegram_voice_replies=_env_bool("TELEGRAM_VOICE_REPLIES", True),
     )
 
 

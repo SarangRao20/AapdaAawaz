@@ -35,6 +35,7 @@ LOCATION_EVIDENCE = {
     "place_only": 0.8,
     "landmark_only": 0.5,
     "unmapped": 0.4,
+    "possible_match": 0.3,
     "ambiguous": 0.2,
     "conflicting": 0.2,
     "missing": 0.0,
@@ -92,6 +93,53 @@ def _num(tok: Token) -> int | None:
     if tok.norm.isdigit():
         return int(tok.norm)
     return _NUMBER_WORDS.get(tok.norm)
+
+
+_EN_TENS = {"twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"}
+_EN_UNITS = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine"}
+_HUNDREDS = _norm_set({"hundred", "sau", "सौ"})
+_AND = _norm_set({"and", "aur", "और"})
+
+
+def _under_hundred_at(tokens: list[Token], i: int) -> tuple[int | None, int]:
+    """(value, tokens used) for a number below 100; English writes these as two words ("twenty five")."""
+    value = _num(tokens[i])
+    if value is None or value >= 100:
+        return None, 0
+    if (tokens[i].norm in _EN_TENS and i + 1 < len(tokens) and tokens[i + 1].clause == tokens[i].clause
+            and tokens[i + 1].norm in _EN_UNITS):
+        return value + _NUMBER_WORDS[tokens[i + 1].norm], 2
+    return value, 1
+
+
+def _num_at(tokens: list[Token], i: int) -> tuple[int | None, int]:
+    """(value, tokens used) for the number starting at token i, including compound forms.
+
+    Parts must share a clause, so "twenty, five people" stays two separate numbers.
+    """
+    value, used = _under_hundred_at(tokens, i)
+    clause = tokens[i].clause
+
+    def in_clause(j: int) -> bool:
+        return j < len(tokens) and tokens[j].clause == clause
+
+    if value is not None and in_clause(i + used) and tokens[i + used].norm in _HUNDREDS:
+        value, used = value * 100, used + 1
+    elif value is None:
+        value = _num(tokens[i])
+        if value is None:
+            return None, 0
+        used = 1
+    if value >= 100 and value % 100 == 0:
+        j = i + used
+        if in_clause(j) and tokens[j].norm in _AND:
+            j += 1
+        # Only words combine: "100 20" is two numbers, "one hundred twenty" is one.
+        if in_clause(j) and not tokens[j].norm.isdigit() and not tokens[i + used - 1].norm.isdigit():
+            rest, rest_used = _under_hundred_at(tokens, j)
+            if rest is not None:
+                return value + rest, j + rest_used - i
+    return value, used
 
 
 def _split_hits(tokens: list[Token], keywords: list[str], negatable: bool = True) -> tuple[list[Match], list[Match]]:
@@ -182,6 +230,12 @@ def _dangers(tokens: list[Token], ev: list[Evidence]) -> list[str]:
 def _numbers_near(tokens: list[Token], idx: int) -> int | None:
     """A number directly before a word (e.g. 'do buzurg', 'two elderly')."""
     if idx > 0 and tokens[idx - 1].clause == tokens[idx].clause:
+        for back in range(min(idx, 4), 1, -1):  # longest compound first: "two hundred fifty", "twenty five"
+            start = idx - back
+            if tokens[start].clause == tokens[idx].clause:
+                value, used = _num_at(tokens, start)
+                if value is not None and used == back:
+                    return value
         return _num(tokens[idx - 1])
     return None
 
@@ -203,15 +257,17 @@ def _people_and_ages(tokens: list[Token], ev: list[Evidence], unc: list[str], qu
                 if _is_people_noun(tokens[k]):
                     vague_text = " ".join(t.orig for t in tokens[i:k + 1])
                     break
-        value = _num(tok)
+        value, used = _num_at(tokens, i)
         if value is None:
             i += 1
             continue
         start, low = i, None
-        if (i + 2 < n and tokens[i + 1].norm in _RANGE and tokens[i + 2].clause == tok.clause
-                and _num(tokens[i + 2]) is not None):
-            low, value = value, _num(tokens[i + 2])
-            i += 2
+        i += used - 1  # now on the last token of the number
+        upper, upper_used = (_num_at(tokens, i + 2) if i + 2 < n and tokens[i + 2].clause == tok.clause
+                             else (None, 0))
+        if i + 2 < n and tokens[i + 1].norm in _RANGE and upper is not None:
+            low, value = value, upper
+            i += 1 + upper_used
         # "N से ज्यादा / more than N" → treat as approximate count equal to N
         elif (i + 2 < n and tokens[i + 1].norm in _RANGE and tokens[i + 2].clause == tok.clause
               and tokens[i + 2].norm in _APPROX):
@@ -417,6 +473,19 @@ def _location(tokens: list[Token], ev: list[Evidence], unc: list[str], quality: 
         unc.append(f"Only a landmark was named ('{specific_hits[lid][0].text}'); village not confirmed")
         return loc
 
+    possible = _possible_village(tokens)
+    if possible:
+        pid, heard = possible
+        # A guess must not drop a pin or pass as verified: stay ambiguous so a person confirms it.
+        loc.status, loc.source = "ambiguous", "caller_stated"
+        loc.place_name, loc.landmark, loc.candidates = heard, landmark_text, [pid]
+        loc.confidence = LOCATION_EVIDENCE["possible_match"]
+        loc.confidence_basis = (f"heard '{heard}', which may be a misheard '{gz.places[pid].name}'; "
+                                "not confirmed, so no coordinates assigned")
+        unc.append(f"'{heard}' may be a misheard '{gz.places[pid].name}'; confirm the place with the caller")
+        ev.append(Evidence(field="location", text=heard))
+        return loc
+
     unmapped = _unmapped_place(tokens)
     if unmapped:
         from ..config import settings
@@ -458,6 +527,44 @@ def _location(tokens: list[Token], ev: list[Evidence], unc: list[str], quality: 
     loc.confidence_basis = "no place or landmark found in the transcript"
     unc.append("No location was stated")
     return loc
+
+
+def _within_one_edit(a: str, b: str) -> bool:
+    """True when a and b differ by at most one inserted, removed or replaced character."""
+    if abs(len(a) - len(b)) > 1:
+        return False
+    i = 0
+    while i < min(len(a), len(b)) and a[i] == b[i]:
+        i += 1
+    if len(a) == len(b):
+        return a[i + 1:] == b[i + 1:]
+    return (a[i + 1:] == b[i:]) if len(a) > len(b) else (a[i:] == b[i + 1:])
+
+
+def _possible_village(tokens: list[Token]) -> tuple[str, str] | None:
+    """(place id, heard word) when one word is a single character away from exactly one reference village.
+
+    Limited to the villages (the places that have landmarks) and to names of 6+ characters: speech
+    recognition garbles unfamiliar village names, while loosening matches on city aliases causes real
+    errors, e.g. "madrasa" (a school) is one letter from "Madras". The first character must match.
+    """
+    gz = load_gazetteer()
+    village_ids = {lm.place_id for lm in gz.landmarks.values()}
+    found: dict[str, str] = {}
+    for tok in tokens:
+        if len(tok.norm) < 6 or tok.norm in _VILLAGE or tok.norm in _NOT_A_PLACE:
+            continue
+        for pid in village_ids:
+            for alias in gz.places[pid].aliases:
+                parts = compile_keyword(alias).parts
+                if len(parts) != 1 or len(parts[0][0]) < 6 or parts[0][0][0] != tok.norm[0]:
+                    continue
+                stem, prefix = parts[0]
+                # Prefix aliases allow case suffixes (-त, -मध्ये), so compare only the start of the word.
+                variants = ([tok.norm[:len(stem) + d] for d in (-1, 0, 1)] if prefix else [tok.norm])
+                if any(_within_one_edit(v, stem) for v in variants):
+                    found.setdefault(pid, tok.orig)
+    return next(iter(found.items())) if len(found) == 1 else None
 
 
 def _unmapped_place(tokens: list[Token]) -> str | None:

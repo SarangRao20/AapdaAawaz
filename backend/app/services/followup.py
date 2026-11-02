@@ -58,7 +58,7 @@ def missing_fields(ext: dict) -> list[str]:
     """Return list of missing critical field keys for a given extraction dict."""
     missing: list[str] = []
     loc = ext.get("location") or {}
-    if loc.get("status") == "missing" or not (loc.get("place_name") or loc.get("landmark")):
+    if not ext.get("caller_gps") and (loc.get("status") == "missing" or not (loc.get("place_name") or loc.get("landmark"))):
         missing.append("location_missing")
     if ext.get("disaster_type", "unknown") == "unknown":
         missing.append("disaster_unknown")

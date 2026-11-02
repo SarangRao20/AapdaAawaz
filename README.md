@@ -89,7 +89,7 @@ Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variab
 | `EVON_BASE_URL` | `https://api.vachana.ai/v1` | Evon LLM endpoint (OpenAI-compatible) |
 | `EVON_MODEL` | `evon-v3.3` | Evon model name |
 | `EVON_TIMEOUT_S` / `EVON_MAX_RETRIES` | `60` / `2` | Timeout and retries for Evon calls |
-| `TIMBRE_MODEL`, `TIMBRE_VOICE_*` | `timbre-v3.0`, Ishaan/Nalini/Kaveri/Poorvi | Voice per language |
+| `TIMBRE_MODEL`, `TIMBRE_VOICE_*` | `timbre-v2.5`, Ishaan/Nalini/Kaveri/Poorvi | Voice per language; these voices exist only on v2.5 |
 | `AAPDA_VAR_DIR` | `backend/var` | SQLite DB, uploads, generated audio |
 | `DATABASE_URL` | `sqlite:///<var>/aapda.db` | |
 | `CORS_ORIGINS` | dashboard (`:5173`), caller app (`:5174`), caller APK (`http://localhost`) | Explicit list, no wildcard |
@@ -97,6 +97,30 @@ Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variab
 
 Runtime thresholds (confidence gate, dedup, priority labels, provider mode) are edited on the
 **Settings** page and stored in the database.
+
+### Telegram bot
+
+People can report by voice note, text or GPS in Telegram, with no public URL needed.
+
+1. In Telegram, message **@BotFather**, send `/newbot` and copy the token.
+2. Add `TELEGRAM_BOT_TOKEN=<token>` to `.env` and restart the backend. Never commit the token.
+3. Open your bot in Telegram and send `/start`.
+
+The bot records what the caller says, then asks for each missing required field (location, what happened,
+how many people), one at a time, by text and voice note. Unanswered questions repeat every
+`TELEGRAM_FOLLOWUP_INTERVAL_S` seconds (default 120), up to `TELEGRAM_FOLLOWUP_MAX_ATTEMPTS` attempts (default 3).
+Telegram bots cannot place phone or voice calls, so these messages are the automated follow-up.
+
+The **Share location** button stores the caller's real GPS, labelled separately from simulated village points.
+Anyone who finds the bot can use it unless you set `TELEGRAM_ALLOWED_CHAT_IDS`. Run only one copy per token.
+
+### 3D location view
+
+Command Center → **3D Site**, and each incident page, fly into a tilted view of the incident. It works with no key,
+using free satellite imagery and terrain. For Google's photorealistic 3D tiles, add
+`VITE_GOOGLE_MAPS_API_KEY=<key>` to `frontend/.env.local`, enable the **Map Tiles API** and the
+**Maps JavaScript API**, and restrict the key by HTTP referrer, since it reaches the browser. Google requires billing
+to be enabled on the project.
 
 ### Database
 

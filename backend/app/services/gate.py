@@ -11,7 +11,7 @@ from .priority import LABEL_RANK
 
 LOCATION_REASONS = {
     "missing": ("location_missing", "No location stated"),
-    "ambiguous": ("location_ambiguous", "Location ambiguous (generic landmark, no village)"),
+    "ambiguous": ("location_ambiguous", "Location ambiguous"),
     "conflicting": ("location_conflicting", "Several places mentioned"),
     "unmapped": ("location_unmapped", "Place not in the reference dataset"),
     "landmark_only": ("location_landmark_only", "Only a landmark named; village not stated"),
@@ -30,7 +30,8 @@ def assess(ext: dict, priority_label: str, cfg: dict) -> tuple[dict, list[dict]]
     loc = ext.get("location") or {}
     lstatus = loc.get("status", "missing")
     lconf = float(loc.get("confidence") or 0.0)
-    loc_ok = lstatus == "grounded" and lconf >= g["min_location_confidence"]
+    has_gps = bool(ext.get("caller_gps"))
+    loc_ok = has_gps or (lstatus == "grounded" and lconf >= g["min_location_confidence"])
     fields["location"] = {
         "status": "ok" if loc_ok else "review",
         "location_status": lstatus,
@@ -38,7 +39,9 @@ def assess(ext: dict, priority_label: str, cfg: dict) -> tuple[dict, list[dict]]
         "basis": loc.get("confidence_basis"),
         "verified": False,
     }
-    if lstatus in LOCATION_REASONS:
+    if has_gps:
+        fields["location"]["basis"] = "GPS position shared by the caller"
+    elif lstatus in LOCATION_REASONS:
         code, msg = LOCATION_REASONS[lstatus]
         reasons.append(reason(code, "location", f"{msg}: {loc.get('confidence_basis', '')}".rstrip(": ")))
     elif not loc_ok:
@@ -100,7 +103,7 @@ def incident_reasons(fields: dict, pending_suggestions: list[dict], all_low_qual
     g = cfg["gate"]
     out: list[dict] = []
     status = fields["location_status"]
-    if status not in ("simulated_reference", "human_verified"):
+    if status not in ("simulated_reference", "human_verified", "caller_gps"):
         msg = {"ambiguous": "Location ambiguous or conflicting across reports",
                "caller_stated_unmapped": "Caller-stated place is not in the reference dataset",
                }.get(status, "No usable location")

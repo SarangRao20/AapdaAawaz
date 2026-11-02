@@ -118,7 +118,7 @@ def inject(db: Session, fixture_id: str, use_audio: bool) -> models.Report:
 def reset(db: Session, reset_settings: bool = False) -> dict:
     with PIPELINE_LOCK:
         counts = {}
-        for model in (models.DuplicateSuggestion, models.IncidentLink, models.ReviewRecord, models.Acknowledgement,
+        for model in (models.TelegramConversation, models.DuplicateSuggestion, models.IncidentLink, models.ReviewRecord, models.Acknowledgement,
                       models.ProcessingJob, models.AudioFile, models.Incident, models.Report, models.AuditLog,
                       models.EvaluationRun):
             counts[model.__tablename__] = db.execute(delete(model)).rowcount
