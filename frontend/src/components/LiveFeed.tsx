@@ -2,7 +2,7 @@ import { CheckCircle2, Copy, FileAudio, GitMerge, Loader2, Mic, XCircle } from "
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "../lib/cn";
-import { clock, langLabel } from "../lib/format";
+import { clock, label, langLabel } from "../lib/format";
 import type { ReportSummary } from "../lib/types";
 import { ModeBadge, PriorityBadge, SyntheticTag } from "./badges";
 import { Badge, Empty } from "./ui";
@@ -90,6 +90,8 @@ export function LiveFeed({ items, compact }: { items: ReportSummary[]; compact?:
             <Badge>{langLabel(r.language)}</Badge>
             <StatusPill status={r.status} />
             {r.priority_label && <PriorityBadge value={r.priority_label} />}
+            {r.source === "telegram" && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">{label(r.source)}</Badge>}
+            {r.caller_location && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">GPS shared</Badge>}
             {r.is_synthetic && <SyntheticTag />}
           </div>
           {!compact && r.audio[0] && <audio controls preload="none" src={r.audio[0].url} className="h-8 w-full" />}

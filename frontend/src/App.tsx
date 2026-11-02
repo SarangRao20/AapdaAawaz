@@ -12,6 +12,7 @@ import {
   Sun,
   WifiOff,
   X,
+  Inbox,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
@@ -98,6 +99,7 @@ function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void 
 const NAV = [
   { to: "/", label: "New Call", hint: "Record a voice report and process it", icon: Mic, end: true },
   { to: "/live", label: "Situation Room", hint: "Live map, alerts and active incidents", icon: LayoutDashboard },
+  { to: "/reports", label: "Reports", hint: "Every report received, including Telegram", icon: Inbox },
   { to: "/settings", label: "Settings", hint: "API providers and thresholds", icon: SettingsIcon },
 ];
 

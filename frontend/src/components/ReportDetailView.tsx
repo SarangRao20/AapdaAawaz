@@ -57,6 +57,49 @@ function PipelineVisualizer({ jobs }: { jobs: { stage: string; status: string; d
   );
 }
 
+const CONVERSATION_STATE: Record<string, { text: string; className: string }> = {
+  new: { text: "Started", className: "border-line text-ink-2" },
+  needs_text: { text: "Voice note not understood, asked to type", className: "border-[#5b4413] text-[#f6c75a]" },
+  collecting: { text: "Waiting for the caller's answer", className: "border-[#5b4413] text-[#f6c75a]" },
+  complete: { text: "All details collected", className: "border-[#1f5130] text-[#9fe0a8]" },
+  incomplete: { text: "Stopped, caller did not answer", className: "border-[#6b2222] text-[#f59a9a]" },
+};
+
+const AUDIO_KIND: Record<string, string> = {
+  caller_audio: "First voice note",
+  caller_followup: "Answer to a follow-up question",
+};
+
+/** What the bot asked for and what is still open. Rendered only when a follow-up, Telegram chat or GPS exists. */
+function FollowUpSection({ r }: { r: ReportDetail }) {
+  const chat = r.telegram;
+  const state = chat ? CONVERSATION_STATE[chat.state] : null;
+  return (
+    <Section title={chat ? "Telegram conversation" : "Follow-up"}>
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        {state ? <Badge className={state.className}>{state.text}</Badge> : <Badge>{label(r.follow_up_status)}</Badge>}
+        {chat?.pending_field && <span className="text-ink-2">Asking for: {label(chat.pending_field)}</span>}
+        {chat?.next_followup_at && <span className="text-ink-3">Next reminder {clock(chat.next_followup_at)}</span>}
+      </div>
+      {r.follow_up_missing_fields.length > 0 && (
+        <p className="text-xs text-ink-2">Asked the caller for: {r.follow_up_missing_fields.map((f) => label(f)).join(", ")}</p>
+      )}
+      {chat && chat.skipped_fields.length > 0 && (
+        <p className="text-xs text-[#f6c75a]">Caller answered "don't know" for: {chat.skipped_fields.map((f) => label(f)).join(", ")}</p>
+      )}
+      {r.caller_location && (
+        <p className="text-xs text-ink-2">
+          GPS shared by the caller (unverified):{" "}
+          <span className="font-mono">
+            {r.caller_location.latitude.toFixed(5)}, {r.caller_location.longitude.toFixed(5)}
+          </span>
+          {r.caller_location.accuracy_m != null && <> · accurate to about {Math.round(r.caller_location.accuracy_m)} m</>}
+        </p>
+      )}
+    </Section>
+  );
+}
+
 export function ReportDetailView({ report, onChanged }: { report: ReportDetail; onChanged: () => void }) {
   const r = report;
   const [text, setText] = useState(r.transcript ?? "");
@@ -114,7 +157,7 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
             <div key={a.id} className="space-y-1">
               <WaveformPlayer src={a.url} />
               <div className="text-2xs text-ink-3">
-                {a.original_filename} · {a.mime_type} · {(a.size_bytes / 1024).toFixed(0)} KB {a.kind === "fixture" && "· synthetic fixture audio (computer-generated voice)"}
+                {AUDIO_KIND[a.kind] ?? a.original_filename} · {a.mime_type} · {(a.size_bytes / 1024).toFixed(0)} KB {a.kind === "fixture" && "· synthetic fixture audio (computer-generated voice)"}
               </div>
             </div>
           ))
@@ -137,7 +180,7 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
           {r.transcript_request_id && <span className="font-mono text-2xs text-ink-3">request {r.transcript_request_id}</span>}
         </div>
         {r.transcript ? (
-          <blockquote className="rounded-md border border-line bg-surface-2 px-3 py-2 text-sm leading-relaxed text-ink" lang={r.language ?? undefined}>
+          <blockquote className="whitespace-pre-line rounded-md border border-line bg-surface-2 px-3 py-2 text-sm leading-relaxed text-ink" lang={r.language ?? undefined}>
             {r.transcript}
           </blockquote>
         ) : (
@@ -174,6 +217,8 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
           </div>
         )}
       </Section>
+
+      {(r.telegram || r.follow_up_status !== "none" || r.caller_location) && <FollowUpSection r={r} />}
 
       <Section
         title="Processing stages (from job records)"
@@ -234,7 +279,7 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
                 <span className="text-2xs text-ink-3">{r.acknowledgement.error ?? "Audio not generated yet."}</span>
               </div>
             )}
-            <p className="text-2xs text-ink-3">Fixed wording: never promises rescue, arrival times or resolution. Not sent to anyone by this prototype.</p>
+            <p className="text-2xs text-ink-3">Fixed wording: never promises rescue, arrival times or resolution. {r.source === "telegram" ? "The Telegram bot replies to the caller using this template." : "Not sent to anyone by this prototype."}</p>
           </div>
         </Section>
       )}
