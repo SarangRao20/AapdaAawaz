@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { I18nProvider } from './lib/i18n';
 import "./index.css";
+import "./styles/gradients.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

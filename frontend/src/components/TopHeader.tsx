@@ -53,7 +53,7 @@ export function TopHeader() {
   const rows = pipelineRows(health.error ? null : (health.data?.providers ?? null));
 
   return (
-    <div className="sticky top-0 z-50 border-b border-neutral-800 bg-bg/60 px-4 py-2.5 backdrop-blur-xl">
+    <div className="sticky top-0 z-50 border-b border-neutral-800 bg-gradient-to-r from-bg via-bg to-bg/80 backdrop-blur-xl px-4 py-2.5 shadow-lg shadow-orange-500/5">
       <div className="flex items-center justify-between gap-3">
         <div className="text-2xs text-ink-3">
           <span className="inline-flex items-center gap-2">

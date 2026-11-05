@@ -115,18 +115,21 @@ export function CommandCenter() {
 
       {stats.error && <ErrorBanner offline message={offline ? stats.error : `Showing last known data — ${stats.error}`} />}
 
-      <Reveal className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
-          <div className="text-xs text-ink-3"><T>{"Critical"}</T></div>
-          <div className="mt-0.5 text-2xl font-semibold" style={{ color: critical > 0 ? "var(--status-critical, #ff4f4f)" : undefined }}>{critical}</div>
+      <Reveal className="grid grid-cols-3 gap-3">
+        <div className={cn("stat-card", critical > 0 && "border-red-500/30 shadow-lg shadow-red-500/10")}>
+          <div className="text-xs font-medium uppercase tracking-wider text-ink-3"><T>{"Critical"}</T></div>
+          <div className={cn("mt-2 text-3xl font-bold", critical > 0 && "text-gradient")} style={{ color: critical > 0 ? "#ef4444" : undefined }}>{critical}</div>
+          {critical > 0 && <div className="mt-1 text-2xs text-red-400/70">Action required</div>}
         </div>
-        <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
-          <div className="text-xs text-ink-3"><T>{"Need review"}</T></div>
-          <div className="mt-0.5 text-2xl font-semibold text-ink">{s?.incidents_needing_review ?? 0}</div>
+        <div className="stat-card">
+          <div className="text-xs font-medium uppercase tracking-wider text-ink-3"><T>{"Need review"}</T></div>
+          <div className="stat-value mt-2">{s?.incidents_needing_review ?? 0}</div>
+          <div className="mt-1 text-2xs text-amber-400/70">Pending verification</div>
         </div>
-        <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
-          <div className="text-xs text-ink-3"><T>{"Reports in"}</T></div>
-          <div className="mt-0.5 text-2xl font-semibold text-ink">{s?.total_reports ?? 0}</div>
+        <div className="stat-card">
+          <div className="text-xs font-medium uppercase tracking-wider text-ink-3"><T>{"Reports in"}</T></div>
+          <div className="stat-value mt-2">{s?.total_reports ?? 0}</div>
+          <div className="mt-1 text-2xs text-green-400/70">All time</div>
         </div>
       </Reveal>
 
