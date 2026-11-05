@@ -298,10 +298,6 @@ function Sidebar({ collapsed, setCollapsed, openShortcuts, dark, toggleTheme }: 
         {!collapsed && (
           <div className="min-w-0">
             <div className="text-sm font-semibold leading-tight tracking-tight text-white">Aapda Awaaz</div>
-            <div className="mt-0.5 flex items-center gap-1 text-2xs text-ink-3">
-              <GnaniLogo size={10} />
-              <span>Gnani AI</span>
-            </div>
           </div>
         )}
       </div>

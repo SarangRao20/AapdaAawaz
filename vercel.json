@@ -3,7 +3,7 @@
   "outputDirectory": "frontend/dist",
   "framework": "vite",
   "env": {
-    "VITE_API_TARGET": "https://172.198.152.160:8000"
+    "VITE_API_TARGET": "http://172.198.152.160:8000"
   },
   "git": {
     "deploymentEnabled": {
