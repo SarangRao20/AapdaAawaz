@@ -23,10 +23,10 @@ import { api } from "./lib/api";
 import { cn } from "./lib/cn";
 import { I18nProvider } from './lib/i18n';
 import { EASE, pageVariants } from "./lib/motion";
-import type { ProviderStatus } from "./lib/types";
 import { usePoll } from "./lib/usePoll";
 import { useIncidentAlerts } from "./lib/alerts";
 import { AlertToasts } from "./components/AlertToasts";
+import { TopHeader } from "./components/TopHeader";
 import { CommandCenter } from "./pages/CommandCenter";
 import { JourneyPage } from "./pages/Journey";
 import { Landing } from "./pages/Landing";
@@ -125,24 +125,6 @@ function useOnline() {
   return online;
 }
 
-type PipelineTone = "good" | "warning" | "unknown";
-
-/** What the backend says is configured. Grey means unknown: still loading, or the backend is unreachable. */
-function pipelineRows(p: ProviderStatus | null): { label: string; tone: PipelineTone }[] {
-  if (!p) {
-    return ["STT", "TTS", "Extraction"].map((label) => ({ label, tone: "unknown" }));
-  }
-  const stt = p.speech_to_text.mode;
-  return [
-    stt === "real"
-      ? { label: "Prisma · STT", tone: "good" }
-      : { label: `${stt === "mock" ? "Mock" : "Unavailable"} · STT`, tone: "warning" },
-    p.text_to_speech.mode === "real"
-      ? { label: "Timbre · TTS", tone: "good" }
-      : { label: "Text only · TTS", tone: "warning" },
-    { label: `${p.extraction.mode === "real" ? "Evon" : "Rule-based"} · Extraction`, tone: "good" },
-  ];
-}
 
 function ConnectionPill({ collapsed }: { collapsed: boolean }) {
   const health = usePoll(api.health, 10000);
@@ -298,7 +280,6 @@ function GnaniLogo({ size = 16 }: { size?: number }) {
 
 function Sidebar({ collapsed, setCollapsed, openShortcuts, dark, toggleTheme }: { collapsed: boolean; setCollapsed: (v: boolean) => void; openShortcuts: () => void; dark: boolean; toggleTheme: () => void }) {
   const stats = usePoll(api.stats, 5000);
-  const health = usePoll(api.health, 10000);
   const { username, logout } = useAuth();
   const reviewCount = (stats.data?.incidents_needing_review ?? 0) + (stats.data?.possible_duplicates_pending ?? 0);
   const badges: Record<string, number> = { "/live": reviewCount };
@@ -354,28 +335,6 @@ function Sidebar({ collapsed, setCollapsed, openShortcuts, dark, toggleTheme }: 
       </nav>
 
       <div className="space-y-3">
-        {/* Providers reported by /api/health */}
-        {!collapsed && (
-          <div
-            className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 space-y-1.5"
-            title="Providers configured on the backend. This does not confirm that they are reachable."
-          >
-            <div className="text-2xs font-medium uppercase tracking-[0.14em] text-ink-3/60">AI Pipeline</div>
-            {pipelineRows(health.error ? null : (health.data?.providers ?? null)).map(({ label, tone }) => (
-              <div key={label} className="flex items-center gap-2 text-2xs text-ink-2">
-                <span
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full shrink-0",
-                    tone === "good" && "bg-status-good",
-                    tone === "warning" && "bg-status-warning",
-                    tone === "unknown" && "bg-ink-3/40",
-                  )}
-                />
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-        )}
         <ConnectionPill collapsed={collapsed} />
         <button
           onClick={() => void logout()}
@@ -485,9 +444,7 @@ function DashboardShell({ dark, toggleTheme }: { dark: boolean; toggleTheme: () 
       <div className="flex min-h-full">
         <Sidebar collapsed={collapsed} setCollapsed={setSidebar} openShortcuts={() => setShortcuts(true)} dark={dark} toggleTheme={toggleTheme} />
         <div className="flex min-w-0 flex-1 flex-col pb-16 md:pb-0">
-          <div className="flex items-center justify-center gap-2 border-b border-white/[0.04] px-4 py-1.5 text-2xs text-ink-3/50">
-            <span>Built on Gnani AI Prisma · Timbre</span>
-          </div>
+          <TopHeader />
           <main className="mx-auto w-full max-w-[1800px] flex-1 px-4 py-6 md:px-8">
             <>
               <motion.div key={section} variants={pageVariants} initial="initial" animate="enter">

@@ -1,5 +1,5 @@
-import { Database, PlayCircle, RotateCcw, ShieldQuestion } from "lucide-react";
-import { useState } from "react";
+import { Database, PlayCircle, RotateCcw, ShieldQuestion, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { Button, ErrorBanner } from "./ui";
@@ -29,65 +29,99 @@ export function DemoControls({ onChanged, hasData }: { onChanged: () => void; ha
     }
   }
 
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-2xs font-semibold uppercase tracking-wider text-ink-3">Sample data</span>
+      <div className="relative" ref={menuRef}>
         <Button
           size="sm"
-          variant="danger"
-          busy={busy === "reset"}
-          title="Deletes all reports, incidents and review history"
-          onClick={() => {
-            if (hasData && !confirmReset) {
-              setConfirmReset(true);
-              return;
-            }
-            setConfirmReset(false);
-            void run("reset", async () => {
-              await api.reset();
-              return "Data cleared.";
-            });
-          }}
-          onBlur={() => setConfirmReset(false)}
+          variant="secondary"
+          onClick={() => setOpen(!open)}
+          className="flex items-center gap-1"
         >
-          <RotateCcw className="h-3.5 w-3.5" /> {confirmReset ? "Click again to reset all data" : "Reset"}
+          Demo Actions <ChevronDown className="h-3.5 w-3.5" />
         </Button>
-        <Button
-          size="sm"
-          variant="primary"
-          busy={busy === "hero"}
-          onClick={() =>
-            run("hero", async () => {
-              const r = await api.inject("SYN-001", true);
-              return `Call ${r.id} queued — watch its stages in the live feed.`;
-            })
-          }
-        >
-          <PlayCircle className="h-3.5 w-3.5" /> 1 · Incoming call
-        </Button>
-        <Button
-          size="sm"
-          busy={busy === "seed"}
-          onClick={() =>
-            run("seed", async () => {
-              const r = await api.seed("remaining");
-              return `Loaded ${r.created} reports → ${r.stats.unique_incidents} candidate incidents.`;
-            })
-          }
-        >
-          <Database className="h-3.5 w-3.5" /> 2 · Load sample reports
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={async () => {
-            const r = await api.report("R-SYN-025").catch(() => null);
-            navigate(r?.incident_id ? `/incidents/${r.incident_id}` : "/review");
-          }}
-        >
-          <ShieldQuestion className="h-3.5 w-3.5" /> 3 · Ambiguous-location case
-        </Button>
+
+        {open && (
+          <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-neutral-800 bg-surface-1 shadow-lg">
+            <div className="p-2 space-y-1">
+              <button
+                className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-surface-2 transition-colors flex items-center gap-2 text-ink"
+                onClick={() => {
+                  if (hasData && !confirmReset) {
+                    setConfirmReset(true);
+                    return;
+                  }
+                  setConfirmReset(false);
+                  void run("reset", async () => {
+                    await api.reset();
+                    return "Data cleared.";
+                  });
+                  setOpen(false);
+                }}
+                onBlur={() => setConfirmReset(false)}
+                disabled={busy === "reset"}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>{confirmReset ? "Confirm reset" : "Reset all data"}</span>
+              </button>
+
+              <button
+                className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-surface-2 transition-colors flex items-center gap-2 text-ink"
+                onClick={() => {
+                  void run("hero", async () => {
+                    const r = await api.inject("SYN-001", true);
+                    return `Call ${r.id} queued — watch its stages in the live feed.`;
+                  });
+                  setOpen(false);
+                }}
+                disabled={busy === "hero"}
+              >
+                <PlayCircle className="h-3.5 w-3.5" />
+                <span>1 · Incoming call</span>
+              </button>
+
+              <button
+                className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-surface-2 transition-colors flex items-center gap-2 text-ink"
+                onClick={() => {
+                  void run("seed", async () => {
+                    const r = await api.seed("remaining");
+                    return `Loaded ${r.created} reports → ${r.stats.unique_incidents} candidate incidents.`;
+                  });
+                  setOpen(false);
+                }}
+                disabled={busy === "seed"}
+              >
+                <Database className="h-3.5 w-3.5" />
+                <span>2 · Load sample reports</span>
+              </button>
+
+              <button
+                className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-surface-2 transition-colors flex items-center gap-2 text-ink"
+                onClick={async () => {
+                  const r = await api.report("R-SYN-025").catch(() => null);
+                  navigate(r?.incident_id ? `/incidents/${r.incident_id}` : "/review");
+                  setOpen(false);
+                }}
+              >
+                <ShieldQuestion className="h-3.5 w-3.5" />
+                <span>3 · Ambiguous-location case</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {note && <p className="text-xs text-ink-2">{note}</p>}
       {error && <ErrorBanner message={error} />}
