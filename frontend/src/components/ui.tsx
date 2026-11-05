@@ -1,6 +1,7 @@
 import { AlertTriangle, Loader2, WifiOff } from "lucide-react";
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { forwardRef } from "react";
+import { useI18n } from "../lib/i18n";
 import { cn } from "../lib/cn";
 import { CountUp } from "../lib/motion";
 
@@ -173,4 +174,11 @@ export function CountUpStat({ label, value, tone }: { label: string; value: numb
       </div>
     </Card>
   );
+}
+
+// Simple translatable text component - uses sync t() from cache
+export function T({ children }: { children: string }) {
+  const { t, locale } = useI18n();
+  // Include locale in output to make component re-render when language changes
+  return <>{locale && t(children)}</>;
 }

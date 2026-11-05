@@ -9,7 +9,7 @@ import { Globe } from "../components/Globe";
 import { IncidentMap } from "../components/IncidentMap";
 import { IncidentQueue } from "../components/IncidentQueue";
 import { IncidentQuickPanel } from "../components/IncidentQuickPanel";
-import { Card, CardHeader, ErrorBanner, Spinner } from "../components/ui";
+import { Card, CardHeader, ErrorBanner, Spinner, T } from "../components/ui";
 import { useIncidentAlerts } from "../lib/alerts";
 import { api } from "../lib/api";
 import { cn } from "../lib/cn";
@@ -104,7 +104,7 @@ export function CommandCenter() {
               <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-status-good" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-status-good" />
             </span>
-            <span className="text-xs font-medium text-ink-3">Live · Situation Room</span>
+            <span className="text-xs font-medium text-ink-3"><T>{"Live · Situation Room"}</T></span>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-white">
             {critical > 0 ? `${critical} critical — start with the red pins` : all.length ? "All clear — no critical incidents" : "Waiting for reports"}
@@ -117,15 +117,15 @@ export function CommandCenter() {
 
       <Reveal className="grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
-          <div className="text-xs text-ink-3">Critical</div>
+          <div className="text-xs text-ink-3"><T>{"Critical"}</T></div>
           <div className="mt-0.5 text-2xl font-semibold" style={{ color: critical > 0 ? "var(--status-critical, #ff4f4f)" : undefined }}>{critical}</div>
         </div>
         <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
-          <div className="text-xs text-ink-3">Need review</div>
+          <div className="text-xs text-ink-3"><T>{"Need review"}</T></div>
           <div className="mt-0.5 text-2xl font-semibold text-ink">{s?.incidents_needing_review ?? 0}</div>
         </div>
         <div className="rounded-xl border border-line bg-surface-1 px-4 py-3">
-          <div className="text-xs text-ink-3">Reports in</div>
+          <div className="text-xs text-ink-3"><T>{"Reports in"}</T></div>
           <div className="mt-0.5 text-2xl font-semibold text-ink">{s?.total_reports ?? 0}</div>
         </div>
       </Reveal>
@@ -152,7 +152,7 @@ export function CommandCenter() {
               >
                 {view === key && <motion.span layoutId="view-pill" className="absolute inset-0 rounded-lg bg-white/10" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
                 <Icon className="relative h-3.5 w-3.5" aria-hidden />
-                <span className="relative">{text}</span>
+                <span className="relative"><T>{text}</T></span>
               </button>
             ))}
           </div>

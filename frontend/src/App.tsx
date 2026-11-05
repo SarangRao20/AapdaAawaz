@@ -21,7 +21,7 @@ import { NavLink, Route, Routes, useLocation, useNavigate } from "react-router-d
 import { AuthProvider, RequireAuth, useAuth } from "./lib/auth";
 import { api } from "./lib/api";
 import { cn } from "./lib/cn";
-import { useI18n, I18nProvider, type Locale } from './lib/i18n';
+import { I18nProvider } from './lib/i18n';
 import { EASE, pageVariants } from "./lib/motion";
 import type { ProviderStatus } from "./lib/types";
 import { usePoll } from "./lib/usePoll";
@@ -286,35 +286,6 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
   );
 }
 
-function LangToggle({ collapsed }: { collapsed: boolean }) {
-  const { locale, setLocale } = useI18n();
-  const langs: { code: Locale; label: string }[] = [
-    { code: "en", label: "EN" },
-    { code: "hi", label: "हिं" },
-    { code: "mr", label: "मर" },
-  ];
-  if (collapsed) return null;
-  return (
-    <div className="flex gap-1 rounded-xl border border-white/5 bg-white/[0.03] p-1" role="group" aria-label="Interface language">
-      {langs.map(({ code, label: lbl }) => (
-        <button
-          key={code}
-          onClick={() => setLocale(code)}
-          className={cn(
-            "flex-1 rounded-lg py-1 text-xs font-medium transition-colors",
-            locale === code
-              ? "bg-accent/20 text-accent-glow"
-              : "text-ink-3 hover:text-ink",
-          )}
-          aria-pressed={locale === code}
-        >
-          {lbl}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function GnaniLogo({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -405,7 +376,6 @@ function Sidebar({ collapsed, setCollapsed, openShortcuts, dark, toggleTheme }: 
             ))}
           </div>
         )}
-        <LangToggle collapsed={collapsed} />
         <ConnectionPill collapsed={collapsed} />
         <button
           onClick={() => void logout()}
