@@ -31,12 +31,12 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE = import.meta.env.VITE_API_TARGET || "";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    const url = API_BASE ? `${API_BASE}${path}` : path;
+    // Always same-origin: Vite proxies /api in dev, a Vercel rewrite does in production.
+    const url = path;
     // Same-origin via the Vercel /api rewrite; the header skips ngrok's browser interstitial page.
     const headers = new Headers(init?.headers);
     headers.set("ngrok-skip-browser-warning", "1");
