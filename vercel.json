@@ -3,6 +3,9 @@
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
   "framework": "vite",
+  "env": {
+    "VITE_API_TARGET": "https://flatfoot-errand-armored.ngrok-free.dev"
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
