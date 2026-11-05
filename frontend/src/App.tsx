@@ -288,29 +288,77 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
 
 function LangToggle({ collapsed }: { collapsed: boolean }) {
   const { locale, setLocale } = useI18n();
-  const langs: { code: Locale; label: string }[] = [
+  const [input, setInput] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
+
+  const presets: { code: Locale; label: string }[] = [
     { code: "en", label: "EN" },
     { code: "hi", label: "हिं" },
     { code: "mr", label: "मर" },
+    { code: "es", label: "ES" },
+    { code: "fr", label: "FR" },
+    { code: "de", label: "DE" },
+    { code: "ja", label: "日本" },
+    { code: "ar", label: "العربية" },
+    { code: "pt", label: "PT" },
   ];
+
+  const handleCustom = () => {
+    if (input.trim()) {
+      setLocale(input.trim().toLowerCase());
+      setInput("");
+      setShowCustom(false);
+    }
+  };
+
   if (collapsed) return null;
   return (
-    <div className="flex gap-1 rounded-xl border border-white/5 bg-white/[0.03] p-1" role="group" aria-label="Interface language">
-      {langs.map(({ code, label: lbl }) => (
+    <div className="space-y-2">
+      <div className="flex gap-1 rounded-xl border border-white/5 bg-white/[0.03] p-1 flex-wrap" role="group" aria-label="Interface language">
+        {presets.map(({ code, label: lbl }) => (
+          <button
+            key={code}
+            onClick={() => setLocale(code)}
+            className={cn(
+              "rounded-lg px-2 py-1 text-xs font-medium transition-colors",
+              locale === code
+                ? "bg-accent/20 text-accent-glow"
+                : "text-ink-3 hover:text-ink",
+            )}
+            aria-pressed={locale === code}
+            title={code}
+          >
+            {lbl}
+          </button>
+        ))}
+      </div>
+      {showCustom && (
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCustom()}
+            placeholder="Language code (e.g., ko, th, bn)"
+            className="flex-1 rounded-lg bg-white/5 px-2 py-1 text-xs text-ink placeholder:text-ink-3 focus:outline-none focus:ring-1 focus:ring-accent"
+            autoFocus
+          />
+          <button
+            onClick={handleCustom}
+            className="rounded-lg bg-accent/20 px-2 py-1 text-xs font-medium text-accent-glow hover:bg-accent/30"
+          >
+            Set
+          </button>
+        </div>
+      )}
+      {!showCustom && (
         <button
-          key={code}
-          onClick={() => setLocale(code)}
-          className={cn(
-            "flex-1 rounded-lg py-1 text-xs font-medium transition-colors",
-            locale === code
-              ? "bg-accent/20 text-accent-glow"
-              : "text-ink-3 hover:text-ink",
-          )}
-          aria-pressed={locale === code}
+          onClick={() => setShowCustom(true)}
+          className="w-full rounded-lg bg-white/[0.03] px-2 py-1 text-2xs text-ink-3 hover:bg-white/5 hover:text-ink transition-colors"
         >
-          {lbl}
+          + Custom language
         </button>
-      ))}
+      )}
     </div>
   );
 }
