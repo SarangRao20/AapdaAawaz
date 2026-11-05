@@ -31,10 +31,13 @@ export class ApiError extends Error {
   }
 }
 
+const API_BASE = import.meta.env.VITE_API_TARGET || "";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, init);
+    const url = API_BASE ? `${API_BASE}${path}` : path;
+    res = await fetch(url, init);
   } catch {
     throw new ApiError("Backend unreachable — is the API server running on port 8000?", 0);
   }
