@@ -122,11 +122,12 @@ class Settings:
         return bool(self.twilio_account_sid and self.twilio_auth_token)
 
 
-# Dashboard dev server, caller-app dev server, and the caller APK's WebView (http://localhost).
+# Dashboard dev server, caller-app dev server, caller APK WebView, and production Vercel deployment
 DEFAULT_CORS_ORIGINS = (
     "http://localhost:5173", "http://127.0.0.1:5173",
     "http://localhost:5174", "http://127.0.0.1:5174",
     "http://localhost",
+    "https://aapdaawaaz.vercel.app",
 )
 
 
