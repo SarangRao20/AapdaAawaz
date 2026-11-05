@@ -1,0 +1,293 @@
+/* ============================================
+   AAPDA AWAAZ - MODERN GRADIENT DESIGN SYSTEM
+   ============================================ */
+
+:root {
+  /* Primary Gradients */
+  --gradient-primary: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  --gradient-primary-hover: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+
+  /* Critical/Emergency Gradient */
+  --gradient-critical: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  --gradient-critical-glow: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+
+  /* Success Gradient */
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+
+  /* Warning Gradient */
+  --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+
+  /* Glass/Frost Effect */
+  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+
+  /* Hero Section Gradient */
+  --gradient-hero: linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(239, 68, 68, 0.1) 50%, rgba(168, 85, 247, 0.08) 100%);
+
+  /* Card Hover Gradient */
+  --gradient-card-hover: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+
+  /* Glow Effects */
+  --glow-orange: 0 0 20px rgba(249, 115, 22, 0.3);
+  --glow-red: 0 0 20px rgba(239, 68, 68, 0.3);
+  --glow-green: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+/* Hero Sections */
+.hero {
+  background: var(--gradient-hero);
+  border-radius: 2rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(249, 115, 22, 0.1), transparent 70%);
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 3rem;
+}
+
+/* Icon Badges with Gradients */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: var(--glow-orange);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow-orange), 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Feature Cards */
+.feature-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-card-hover);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.feature-card:hover {
+  border-color: rgba(249, 115, 22, 0.5);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.feature-card:hover::before {
+  opacity: 1;
+}
+
+/* Primary Button Gradient */
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: var(--glow-orange);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-primary-hover);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow-orange), 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Critical Button */
+.btn-critical {
+  background: var(--gradient-critical);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  box-shadow: var(--glow-red);
+  transition: all 0.3s ease;
+}
+
+.btn-critical:hover {
+  background: var(--gradient-critical-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--glow-red), 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Badge Gradients */
+.badge-critical {
+  background: var(--gradient-critical);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: var(--glow-red);
+}
+
+.badge-success {
+  background: var(--gradient-success);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: var(--glow-green);
+}
+
+.badge-warning {
+  background: var(--gradient-warning);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Text Gradient */
+.text-gradient {
+  background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Stat Cards */
+.stat-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: rgba(249, 115, 22, 0.3);
+  transform: translateY(-2px);
+}
+
+.stat-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animated Background Gradient */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient {
+  background: linear-gradient(
+    -45deg,
+    rgba(249, 115, 22, 0.1),
+    rgba(239, 68, 68, 0.1),
+    rgba(168, 85, 247, 0.1)
+  );
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+/* Smooth Transitions */
+.smooth-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tab Active State with Gradient */
+.tab-active {
+  border-bottom: 2px solid transparent;
+  border-image: var(--gradient-primary) 1;
+  color: white;
+}
+
+/* Modal with Gradient Border */
+.modal-header {
+  background: var(--gradient-hero);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Loading Animation with Gradient */
+@keyframes gradient-loading {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 1000px 100%;
+  animation: gradient-loading 2s infinite;
+  border-radius: 0.5rem;
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .feature-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  }
+
+  .icon-badge {
+    box-shadow: var(--glow-orange);
+  }
+}
