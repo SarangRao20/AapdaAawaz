@@ -20,6 +20,7 @@ import { usePoll } from "../lib/usePoll";
 import type { Incident } from "../lib/types";
 
 const POLL_MS = 2500;
+const SHOW_DEMO = !import.meta.env.PROD || import.meta.env.VITE_SHOW_DEMO === "true";
 type View = "globe" | "map" | "site" | "timeline";
 
 const SiteView3D = lazy(() => import("../components/SiteView3D"));
@@ -57,7 +58,9 @@ export function CommandCenter() {
   const [params, setParams] = useSearchParams();
   const [selected, setSelected] = useState<string | null>(params.get("focus"));
   const [view, setView] = useState<View>("globe");
-  const [scope, setScope] = useState<"urgent" | "all">("urgent");
+  const [scope, setScope] = useState<"urgent" | "all" | "closed">("urgent");
+  // Resolved incidents are off the board; this only loads when someone opens the "Closed" tab.
+  const closed = usePoll(() => (scope === "closed" ? api.incidents({ status: "closed", limit: 200 }) : Promise.resolve(null)), scope === "closed" ? 5000 : 0, [scope]);
   const [showAll, setShowAll] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -85,13 +88,15 @@ export function CommandCenter() {
     return true;
   }), [all, priorityFilter, typeFilter]);
   const urgent = useMemo(() => filtered.filter((i) => i.priority_label === "critical" || i.priority_label === "high"), [filtered]);
-  const list = scope === "urgent" && urgent.length ? urgent : filtered;
-  const selectedIncident = all.find((i) => i.id === selected) ?? null;
+  const closedItems = closed.data?.items ?? [];
+  const list = scope === "closed" ? closedItems : scope === "urgent" && urgent.length ? urgent : filtered;
+  const selectedIncident = all.find((i) => i.id === selected) ?? closedItems.find((i) => i.id === selected) ?? null;
   const s = stats.data;
   const critical = all.filter((i) => i.priority_label === "critical").length;
   const refreshAll = () => {
     void stats.refresh();
     void incidents.refresh();
+    void closed.refresh();
   };
   const offline = stats.error && !stats.data;
 
@@ -110,7 +115,9 @@ export function CommandCenter() {
             {critical > 0 ? `${critical} critical — start with the red pins` : all.length ? "All clear — no critical incidents" : "Waiting for reports"}
           </h1>
         </div>
-        <DemoControls onChanged={refreshAll} hasData={(s?.total_reports ?? 0) > 0} />
+        {/* Reset / sample data are for rehearsals. A production build hides them unless VITE_SHOW_DEMO=true,
+            so a click cannot wipe real reports or mix fake incidents into the live board. */}
+        {SHOW_DEMO && <DemoControls onChanged={refreshAll} hasData={(s?.total_reports ?? 0) > 0} />}
       </Reveal>
 
       {stats.error && <ErrorBanner offline message={offline ? stats.error : `Showing last known data — ${stats.error}`} />}
@@ -211,19 +218,19 @@ export function CommandCenter() {
                 <ArrowLeft className="h-3.5 w-3.5" /> Back to list
               </button>
               <div className="min-h-0 flex-1">
-                <IncidentQuickPanel incident={selectedIncident} onClose={() => setSelected(null)} />
+                <IncidentQuickPanel incident={selectedIncident} onClose={() => setSelected(null)} onChanged={refreshAll} />
               </div>
             </div>
           ) : (
             <Card className="flex min-h-0 flex-1 flex-col">
               <CardHeader
-                title={scope === "urgent" && urgent.length ? "Needs attention" : "All incidents"}
-                subtitle="Tap one to find it on the globe"
+                title={scope === "closed" ? "Resolved incidents" : scope === "urgent" && urgent.length ? "Needs attention" : "All incidents"}
+                subtitle={scope === "closed" ? "Off the live board. Open one to reopen it." : "Tap one to find it on the globe"}
                 right={
                   <div className="flex rounded-lg bg-white/5 p-0.5 text-2xs">
-                    {(["urgent", "all"] as const).map((k) => (
+                    {(["urgent", "all", "closed"] as const).map((k) => (
                       <button key={k} onClick={() => setScope(k)} className={cn("rounded-md px-2 py-1 transition-colors", scope === k ? "bg-white/10 text-ink" : "text-ink-3 hover:text-ink")}>
-                        {k === "urgent" ? "Urgent" : "All"}
+                        {k === "urgent" ? "Urgent" : k === "all" ? "All" : "Closed"}
                       </button>
                     ))}
                   </div>

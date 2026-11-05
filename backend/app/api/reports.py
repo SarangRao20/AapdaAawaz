@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
@@ -10,12 +11,15 @@ from sqlalchemy.orm import Session
 from .. import models
 from ..config import settings
 from ..db import get_db
+from ..providers.base import ProviderError, ProviderUnavailable
+from ..providers.registry import get_stt
 from ..schemas import Language, ReportCreate, TranscriptSubmit
 from ..services import review as review_svc
-from ..services.acknowledgement import create_text_ack, synthesize_audio
+from ..services.acknowledgement import ack_language, create_text_ack, synthesize_audio
 from ..services.pipeline import PIPELINE_LOCK, audit, new_report_id
 from ..services.settings_store import get_config
 from ..services.storage import UploadError, store_audio
+from ..services.telegram_bot import TelegramBot, required_missing
 from ..services.worker import worker
 from .serializers import ack_view, report_detail, report_summary
 
@@ -170,6 +174,50 @@ def submit_transcript(report_id: str, body: TranscriptSubmit, db: Session = Depe
     if body.process:
         worker.enqueue(rep.id)
     return report_detail(db, rep)
+
+
+@router.post("/{report_id}/followup", status_code=202,
+             summary="Answer a follow-up question: the answer is merged into THIS report, never a new one")
+async def answer_followup(report_id: str, file: UploadFile | None = File(None), text: str | None = Form(None),
+                          db: Session = Depends(get_db)):
+    rep = _get(db, report_id)
+    if rep.status != "processed" or not rep.extraction_current:
+        raise HTTPException(409, "the report must finish processing before a follow-up can be answered")
+    missing = required_missing(rep.extraction_current)
+    if not missing:
+        raise HTTPException(409, "nothing is missing on this report")
+    language = ack_language(rep.language_hint or rep.extraction_current.get("language"))
+
+    answer = (text or "").strip()
+    if file is not None:
+        data = await file.read(settings.max_upload_mb * 1024 * 1024 + 1)
+        try:
+            stored = store_audio(data)
+        except UploadError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        db.add(models.AudioFile(report_id=rep.id, kind="caller_followup",
+                                original_filename=(file.filename or "followup")[:255], stored_name=stored.stored_name,
+                                mime_type=stored.mime_type, size_bytes=stored.size_bytes, sha256=stored.sha256))
+        try:
+            stt = get_stt(get_config(db)["providers"]["stt"])
+            result = await asyncio.to_thread(stt.transcribe, settings.upload_dir / stored.stored_name,
+                                             stored.mime_type, language)
+        except (ProviderError, ProviderUnavailable) as exc:
+            db.commit()  # the recording is kept even though it could not be read
+            raise HTTPException(502, f"could not transcribe the answer: {exc}") from exc
+        answer = (result.transcript or "").strip()
+    if not answer:
+        db.commit()
+        raise HTTPException(422, "no speech was recognised in the answer; type it instead")
+
+    merged, filled = TelegramBot._merge_answer(rep, answer, missing[0], language)
+    audit(db, "report", rep.id, "followup_answer", field=missing[0], old=rep.transcript, new=merged,
+          actor="dispatcher", note=answer[:500])
+    rep.transcript = merged
+    rep.status = "queued"
+    db.commit()
+    worker.enqueue(rep.id)
+    return {"id": rep.id, "status": rep.status, "answer": answer, "field_filled": filled, "answered_field": missing[0]}
 
 
 @router.get("/{report_id}/audio/{audio_id}")

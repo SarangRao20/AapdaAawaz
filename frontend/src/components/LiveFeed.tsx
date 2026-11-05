@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { cn } from "../lib/cn";
 import { clock, label, langLabel } from "../lib/format";
 import type { ReportSummary } from "../lib/types";
+import { AudioClip } from "./AudioClip";
 import { ModeBadge, PriorityBadge, SyntheticTag } from "./badges";
 import { Badge, Empty } from "./ui";
 
@@ -94,7 +95,7 @@ export function LiveFeed({ items, compact }: { items: ReportSummary[]; compact?:
             {r.caller_location && <Badge className="border-[#1d4f6e] text-[#7cc7f0]">GPS shared</Badge>}
             {r.is_synthetic && <SyntheticTag />}
           </div>
-          {!compact && r.audio[0] && <audio controls preload="none" src={r.audio[0].url} className="h-8 w-full" />}
+          {!compact && r.audio[0] && <AudioClip url={r.audio[0].url} filename={r.audio[0].original_filename} />}
           <div className="flex flex-wrap items-center gap-1.5">
             <ModeBadge mode={r.transcript_provider_mode} provider={r.transcript_provider} />
             <DedupPill r={r} />

@@ -95,6 +95,31 @@ def session_username(token: str | None) -> str | None:
     return username if login_configured() and username == settings.admin_username else None
 
 
+WS_TICKET_SECONDS = 60
+
+
+def create_ws_ticket(now: float | None = None) -> str:
+    """A one-minute pass to open a live-call WebSocket. The browser asks for it over the normal logged-in
+    API, then presents it on the socket, which matters when the socket lives on a different host from the
+    dashboard and so cannot carry the dashboard's login cookie."""
+    expires = int((now if now is not None else time.time()) + WS_TICKET_SECONDS)
+    payload = base64.urlsafe_b64encode(f"live-call|{expires}".encode()).decode()
+    return f"{payload}.{_sign(payload)}"
+
+
+def valid_ws_ticket(token: str | None, now: float | None = None) -> bool:
+    if not token or token.count(".") != 1:
+        return False
+    payload, signature = token.split(".")
+    if not hmac.compare_digest(_sign(payload), signature):
+        return False
+    try:
+        kind, expires = base64.urlsafe_b64decode(payload).decode().rsplit("|", 1)
+        return kind == "live-call" and int(expires) > (now if now is not None else time.time())
+    except ValueError:
+        return False
+
+
 def is_authenticated(request: Request) -> bool:
     header = request.headers.get("authorization", "")
     if settings.api_token and header.startswith("Bearer ") and _same(header[7:], settings.api_token):

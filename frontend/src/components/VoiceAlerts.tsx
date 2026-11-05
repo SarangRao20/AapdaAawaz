@@ -1,6 +1,6 @@
 import { Megaphone, Play, Send, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { api } from "../lib/api";
+import { api, fetchAudio } from "../lib/api";
 import { cn } from "../lib/cn";
 import { label } from "../lib/format";
 import { getReviewer } from "../lib/reviewer";
@@ -57,19 +57,32 @@ export function VoiceAlerts({ incidentId }: { incidentId: string }) {
     }
     setError(null);
     setLoadingAudio(true);
-    const player = new Audio(api.alertPreviewUrl(incidentId, template, language));
-    audio.current = player;
-    player.onplaying = () => {
-      setLoadingAudio(false);
-      setPlaying(true);
-    };
-    player.onended = () => setPlaying(false);
-    player.onerror = () => {
-      setLoadingAudio(false);
-      setPlaying(false);
-      setError("Timbre couldn't speak this just now. Check the provider status in Settings.");
-    };
-    void player.play().catch(() => undefined);
+    // Fetched first so the request carries the login cookie and tunnel headers an <audio src> cannot send.
+    fetchAudio(api.alertPreviewUrl(incidentId, template, language))
+      .then((blob) => {
+        const objectUrl = URL.createObjectURL(blob);
+        const player = new Audio(objectUrl);
+        audio.current = player;
+        player.onplaying = () => {
+          setLoadingAudio(false);
+          setPlaying(true);
+        };
+        player.onended = () => {
+          setPlaying(false);
+          URL.revokeObjectURL(objectUrl);
+        };
+        player.onerror = () => {
+          setLoadingAudio(false);
+          setPlaying(false);
+          setError("Timbre couldn't speak this just now. Check the provider status in Settings.");
+        };
+        return player.play();
+      })
+      .catch(() => {
+        setLoadingAudio(false);
+        setPlaying(false);
+        setError("Timbre couldn't speak this just now. Check the provider status in Settings.");
+      });
   }
 
   async function send() {

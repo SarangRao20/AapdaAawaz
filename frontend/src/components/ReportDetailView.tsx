@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { clock, label, langLabel } from "../lib/format";
 import type { ReportDetail } from "../lib/types";
 import { cn } from "../lib/cn";
+import { AudioClip } from "./AudioClip";
 import { ModeBadge, PriorityBadge, SyntheticTag } from "./badges";
 import { ExtractionView, JobTimeline } from "./ExtractionView";
 import { DedupPill, StatusPill } from "./LiveFeed";
@@ -20,12 +21,13 @@ const PIPELINE_STAGES = [
   { key: "acknowledgement", label: "Ack", desc: "Acknowledgement" },
 ] as const;
 
-function PipelineVisualizer({ jobs }: { jobs: { stage: string; status: string; duration_ms?: number | null }[] }) {
+function PipelineVisualizer({ jobs, hasAck }: { jobs: { stage: string; status: string; duration_ms?: number | null }[]; hasAck: boolean }) {
   return (
     <div className="flex items-center gap-0 overflow-x-auto pb-1">
       {PIPELINE_STAGES.map((stage, idx) => {
         const job = jobs.find((j) => j.stage === stage.key || j.stage.startsWith(stage.key));
-        const status = job?.status ?? "pending";
+        // The acknowledgement is written by the pipeline but is not recorded as a job, so it reads from the record itself.
+        const status = job?.status ?? (stage.key === "acknowledgement" && hasAck ? "succeeded" : "pending");
         const isLast = idx === PIPELINE_STAGES.length - 1;
         return (
           <div key={stage.key} className="flex items-center">
@@ -48,7 +50,7 @@ function PipelineVisualizer({ jobs }: { jobs: { stage: string; status: string; d
               <span className="whitespace-nowrap text-2xs text-ink-3">{stage.label}</span>
             </div>
             {!isLast && (
-              <div className={cn("mx-1 h-px w-8 flex-shrink-0", job?.status === "succeeded" ? "bg-status-good/40" : "bg-line")} />
+              <div className={cn("mx-1 h-px w-8 flex-shrink-0", status === "succeeded" ? "bg-status-good/40" : "bg-line")} />
             )}
           </div>
         );
@@ -74,15 +76,34 @@ const AUDIO_KIND: Record<string, string> = {
 function FollowUpSection({ r }: { r: ReportDetail }) {
   const chat = r.telegram;
   const state = chat ? CONVERSATION_STATE[chat.state] : null;
+  // Only Telegram and live calls can reach the caller. For anything else the questions are suggestions
+  // for a dispatcher: saying "asked the caller" there would be a false record of contact.
+  const contacted = r.follow_up_channel !== null;
+  const missing = r.follow_up_missing_fields.map((f) => label(f)).join(", ");
   return (
-    <Section title={chat ? "Telegram conversation" : "Follow-up"}>
+    <Section title={chat ? "Telegram conversation" : contacted ? "Follow-up" : "Missing details"}>
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
-        {state ? <Badge className={state.className}>{state.text}</Badge> : <Badge>{label(r.follow_up_status)}</Badge>}
+        {state ? (
+          <Badge className={state.className}>{state.text}</Badge>
+        ) : contacted ? (
+          <Badge>{label(r.follow_up_status)}</Badge>
+        ) : (
+          <Badge className="border-[#5b4413] text-[#f6c75a]">Caller not contacted</Badge>
+        )}
         {chat?.pending_field && <span className="text-ink-2">Asking for: {label(chat.pending_field)}</span>}
         {chat?.next_followup_at && <span className="text-ink-3">Next reminder {clock(chat.next_followup_at)}</span>}
       </div>
       {r.follow_up_missing_fields.length > 0 && (
-        <p className="text-xs text-ink-2">Asked the caller for: {r.follow_up_missing_fields.map((f) => label(f)).join(", ")}</p>
+        <p className="text-xs text-ink-2">
+          {contacted ? `Asked the caller for: ${missing}` : `Still missing: ${missing}. This system has no way to reach this caller, so a dispatcher needs to find these out.`}
+        </p>
+      )}
+      {!contacted && r.follow_up_questions.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-4 text-xs text-ink-3">
+          {r.follow_up_questions.map((q, i) => (
+            <li key={i}>Suggested question: {q}</li>
+          ))}
+        </ul>
       )}
       {chat && chat.skipped_fields.length > 0 && (
         <p className="text-xs text-[#f6c75a]">Caller answered "don't know" for: {chat.skipped_fields.map((f) => label(f)).join(", ")}</p>
@@ -155,7 +176,7 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
         {r.audio.length ? (
           r.audio.map((a) => (
             <div key={a.id} className="space-y-1">
-              <WaveformPlayer src={a.url} />
+              <WaveformPlayer src={a.url} filename={a.original_filename || `${r.id}.wav`} />
               <div className="text-2xs text-ink-3">
                 {AUDIO_KIND[a.kind] ?? a.original_filename} · {a.mime_type} · {(a.size_bytes / 1024).toFixed(0)} KB {a.kind === "fixture" && "· synthetic fixture audio (computer-generated voice)"}
               </div>
@@ -228,7 +249,7 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
           </Button>
         }
       >
-        <PipelineVisualizer jobs={r.jobs} />
+        <PipelineVisualizer jobs={r.jobs} hasAck={!!r.acknowledgement} />
         <JobTimeline jobs={r.jobs} />
       </Section>
 
@@ -270,7 +291,7 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
               {r.acknowledgement.text}
             </p>
             {r.acknowledgement.audio_url ? (
-              <audio controls src={r.acknowledgement.audio_url} className="h-8 w-full" />
+              <AudioClip url={r.acknowledgement.audio_url} filename={`${r.id}-reply.wav`} />
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" busy={busy === "ack"} onClick={() => act("ack", () => api.acknowledge(r.id))}>

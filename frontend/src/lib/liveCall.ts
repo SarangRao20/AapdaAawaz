@@ -79,6 +79,30 @@ function micError(error: unknown): string {
   return "The microphone couldn't start. This page needs localhost or HTTPS to use it.";
 }
 
+/**
+ * Where the call socket goes. By default the page's own host (Vite proxies it in development; a reverse proxy
+ * that passes WebSockets does in production). Hosts like Vercel rewrite plain HTTP but not WebSockets, so there
+ * VITE_WS_ORIGIN (for example wss://api.example.com) points the socket straight at the API. That host cannot see
+ * the dashboard's login cookie, so a one-minute ticket is fetched first over the normal logged-in API.
+ */
+async function callUrl(): Promise<string> {
+  const configured = (import.meta.env.VITE_WS_ORIGIN as string | undefined)?.trim().replace(/\/+$/, "");
+  if (!configured) {
+    const scheme = location.protocol === "https:" ? "wss" : "ws";
+    return `${scheme}://${location.host}/api/live/call`;
+  }
+  let res: Response;
+  try {
+    res = await fetch("/api/live/ticket", { method: "POST", headers: { "ngrok-skip-browser-warning": "1" }, credentials: "same-origin" });
+  } catch {
+    throw new Error("Could not reach the server to start the call.");
+  }
+  if (res.status === 401) throw new Error("Your session has ended. Please log in again.");
+  if (!res.ok) throw new Error(`The server refused to start a call (${res.status}).`);
+  const { ticket } = (await res.json()) as { ticket: string };
+  return `${configured.replace(/^http/, "ws")}/api/live/call?ticket=${encodeURIComponent(ticket)}`;
+}
+
 export class LiveCallClient {
   private ws: WebSocket | null = null;
   private context: AudioContext | null = null;
@@ -108,20 +132,33 @@ export class LiveCallClient {
     await this.context.audioWorklet.addModule(moduleUrl);
     URL.revokeObjectURL(moduleUrl);
 
-    const scheme = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${scheme}://${location.host}/api/live/call`);
+    let url: string;
+    try {
+      url = await callUrl();
+    } catch (error) {
+      this.handlers.onError(error instanceof Error ? error.message : "Could not prepare the call.");
+      this.finish(null);
+      return;
+    }
+    const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     this.ws = ws;
+    let opened = false;
     ws.onopen = () => {
+      opened = true;
       ws.send(JSON.stringify({ type: "start", language }));
       this.startMicrophone();
     };
     ws.onmessage = (event) => this.onMessage(event);
     ws.onclose = (event) => {
-      if (!this.finished) {
-        this.handlers.onError(event.code === 4401 ? "Your session has ended. Please log in again." : "The call was disconnected.");
-        this.finish(null);
-      }
+      if (this.finished) return;
+      if (event.code === 4401) this.handlers.onError("Your session has ended. Please log in again.");
+      else if (!opened)
+        // Never connected: the server is down, or something in between (a proxy or a host such as Vercel
+        // rewrites) does not pass WebSockets. This is a connection problem, not a problem with the caller.
+        this.handlers.onError("Could not open the call connection. The server may be unreachable, or a proxy in front of it is blocking WebSockets.");
+      else this.handlers.onError("The call was disconnected.");
+      this.finish(null);
     };
   }
 

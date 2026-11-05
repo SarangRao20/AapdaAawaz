@@ -218,6 +218,22 @@ class SplitRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
+class IncidentResolveRequest(BaseModel):
+    """Take an incident off the live board once responders have dealt with it."""
+    model_config = ConfigDict(extra="forbid")
+
+    reviewer: str = Field(min_length=1, max_length=80)
+    reason: Literal["rescued", "false_alarm", "handled_elsewhere", "duplicate"] = "rescued"
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class IncidentReopenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reviewer: str = Field(min_length=1, max_length=80)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
 class SuggestionDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

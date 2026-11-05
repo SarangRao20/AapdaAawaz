@@ -229,6 +229,8 @@ export interface ReportDetail extends ReportSummary {
   follow_up_questions: string[];
   follow_up_missing_fields: string[];
   follow_up_status: "none" | "pending" | "answered" | "unanswered";
+  /** The channel that can really reach the caller. null = nobody has been (or can be) contacted. */
+  follow_up_channel: "telegram" | "live_call" | null;
   telegram: TelegramConversationState | null;
   jobs: Job[];
   links: { incident_id: string; outcome: string; score: number | null; active: boolean; actor: string; created_at: string; deactivated_at: string | null }[];

@@ -242,20 +242,38 @@ function Rail({ scene, ready, jobs, onPick }: { scene: number; ready: boolean[];
   );
 }
 
-function Journey({ reportId, onReset, onFollowUp }: { reportId: string; onReset: () => void; onFollowUp: (id: string) => void }) {
+function Journey({ reportId, onReset }: { reportId: string; onReset: () => void }) {
   const d = useJourney(reportId);
   const [scene, setScene] = useState(0);
   const [shown, setShown] = useState(0);
   const [fading, setFading] = useState(false);
   const [finished, setFinished] = useState(false);
   const [auto, setAuto] = useState(true);
+  const [answering, setAnswering] = useState(false);
+  const sawReprocessing = useRef(false);
   const FINALE = STEP_COUNT;
 
   useEffect(() => {
     setScene(0);
     setShown(0);
     setFinished(false);
+    setAnswering(false);
+    sawReprocessing.current = false;
   }, [reportId]);
+
+  // A follow-up answer is merged into this same report. Once it has been reprocessed, show the updated results
+  // instead of replaying the whole journey, so the page ends on stats rather than going round again.
+  useEffect(() => {
+    if (!answering) return;
+    const status = d.report?.status;
+    if (status && status !== "processed") sawReprocessing.current = true;
+    else if (status === "processed" && sawReprocessing.current) {
+      setAnswering(false);
+      sawReprocessing.current = false;
+      setScene(FINALE);
+      setFinished(false);
+    }
+  }, [answering, d.report?.status, FINALE]);
 
   // Fade the old scene out, then swap. Done by hand because endless animations inside a scene
   // (the waveform) would otherwise keep an exit transition from ever completing.
@@ -293,7 +311,7 @@ function Journey({ reportId, onReset, onFollowUp }: { reportId: string; onReset:
       case 3: return <LocateScene key="3" {...props} />;
       case 4: return <MatchScene key="4" {...props} />;
       case 5: return <PriorityScene key="5" {...props} />;
-      case 6: return <ReplyScene key="6" {...props} onFollowUpAnswered={(newId) => { setScene(0); setFinished(false); onFollowUp(newId); }} />;
+      case 6: return <ReplyScene key="6" {...props} onAnswered={() => setAnswering(true)} />;
       default: return null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,7 +380,7 @@ export function JourneyPage() {
   const navigate = useNavigate();
   const id = params.get("r");
   return id ? (
-    <Journey reportId={id} onReset={() => navigate("/call")} onFollowUp={(newId) => setParams({ r: newId })} />
+    <Journey reportId={id} onReset={() => navigate("/call")} />
   ) : (
     <Start onStarted={(rid) => setParams({ r: rid })} />
   );

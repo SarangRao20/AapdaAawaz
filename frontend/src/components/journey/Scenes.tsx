@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
-import { AlertTriangle, HelpCircle, Mic, Pause, Play, RotateCcw, Sparkles, Users, Volume2 } from "lucide-react";
+import { AlertTriangle, Download, HelpCircle, Mic, Pause, Play, RotateCcw, Sparkles, Users, Volume2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../../lib/api";
+import { useAudioUrl } from "../../lib/useAudioUrl";
+import { usePoll } from "../../lib/usePoll";
 import { cn } from "../../lib/cn";
 import { PRIORITY_COLOR, label, langLabel, locationText, peopleText } from "../../lib/format";
 import { CountUp, EASE } from "../../lib/motion";
@@ -15,7 +17,8 @@ import { Button, Textarea } from "../ui";
 interface SceneProps {
   d: JourneyData;
   onDone: () => void;
-  onFollowUpAnswered?: (newReportId: string) => void;
+  /** A follow-up answer was added to this report and it is being reprocessed. */
+  onAnswered?: () => void;
 }
 
 /** Calls onDone once, `ms` after mount. */
@@ -69,6 +72,7 @@ export function HearScene({ d, onDone }: SceneProps) {
   const r = d.report!;
   const audio = r.audio[0];
   const el = useRef<HTMLAudioElement>(null);
+  const recording = useAudioUrl(audio?.url);
   const [playing, setPlaying] = useState(false);
   const [waitingForSTT, setWaitingForSTT] = useState(false);
   useDoneAfter(2600, () => { if (!d.ready[1]) setWaitingForSTT(true); onDone(); });
@@ -76,8 +80,8 @@ export function HearScene({ d, onDone }: SceneProps) {
     if (d.ready[1]) setWaitingForSTT(false);
   }, [d.ready[1]]);
   useEffect(() => {
-    el.current?.play().then(() => setPlaying(true)).catch(() => undefined);
-  }, []);
+    if (recording.src) el.current?.play().then(() => setPlaying(true)).catch(() => undefined);
+  }, [recording.src]);
   return (
     <SceneFrame title="A voice note arrives" blurb={audio ? "Raw audio from the caller, exactly as received." : "This report came in as text, so there is no audio to play."}>
       <div className="flex h-full flex-col justify-center gap-6">
@@ -95,10 +99,15 @@ export function HearScene({ d, onDone }: SceneProps) {
         <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-ink-2">
           {audio && (
             <>
-              <audio ref={el} src={audio.url} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
-              <Button onClick={() => (playing ? el.current?.pause() : void el.current?.play())}>
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />} {playing ? "Pause" : "Play call"}
+              <audio ref={el} src={recording.src ?? undefined} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
+              <Button disabled={!recording.src} onClick={() => (playing ? el.current?.pause() : void el.current?.play())}>
+                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />} {playing ? "Pause" : recording.error ? "Audio unavailable" : "Play call"}
               </Button>
+              {recording.src && (
+                <a href={recording.src} download={audio.original_filename} className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-xs text-ink-2 hover:bg-white/5 hover:text-ink">
+                  <Download className="h-3.5 w-3.5" aria-hidden /> Download
+                </a>
+              )}
               <span className="text-ink-3">
                 {audio.original_filename} · {(audio.size_bytes / 1024).toFixed(0)} KB
               </span>
@@ -484,31 +493,54 @@ const MISSING_LABEL: Record<string, string> = {
 };
 
 /* 7 ─ Reply ────────────────────────────────────────────────────────────── */
-export function ReplyScene({ d, onDone, onFollowUpAnswered }: SceneProps) {
+export function ReplyScene({ d, onDone, onAnswered }: SceneProps) {
   const r = d.report!;
   const ack = d.ack;
   const { shown, done } = useTypewriter(ack?.text ?? "", !!ack, 24);
   const el = useRef<HTMLAudioElement>(null);
+  const reply = useAudioUrl(ack?.audio_url);
   const [playing, setPlaying] = useState(false);
   const [answerSent, setAnswerSent] = useState(false);
-  useDoneAfter(1800, onDone, d.ready[6] && (done || !ack));
-  useEffect(() => {
-    if (ack?.audio_url) el.current?.play().then(() => setPlaying(true)).catch(() => undefined);
-  }, [ack?.audio_url]);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const followUp = r.follow_up_needed && (r.follow_up_questions?.length ?? 0) > 0;
-  const lang = (r as any).language_hint ?? null;
+  // While something is missing the scene waits for the dispatcher instead of racing on to the finale.
+  useDoneAfter(1800, onDone, d.ready[6] && (done || !ack) && !followUp);
+  useEffect(() => {
+    if (reply.src) el.current?.play().then(() => setPlaying(true)).catch(() => undefined);
+  }, [reply.src]);
+
+  async function submit(answer: { audio?: Blob; text?: string }) {
+    setBusy(true);
+    setErr(null);
+    try {
+      // The answer is added to THIS report and it is reprocessed; a separate new report would restart the journey.
+      await api.answerFollowup(r.id, answer);
+      setAnswerSent(true);
+      d.reload();
+      onAnswered?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <SceneFrame
-      title="Closing the loop"
-      blurb={followUp ? "Critical info was missing — the system asks a targeted follow-up. Record your answer to run the pipeline again." : "The caller gets a calm reply in their own language, so they know they were heard. Dispatch stays a human decision."}
+      title="Reply and open questions"
+      blurb={
+        followUp
+          ? "Key details are still missing. Nobody has been contacted automatically: enter what you learn and this same report is updated."
+          : "A calm reply is prepared in the caller's language so they know they were heard. It is not sent automatically, and dispatch stays a human decision."
+      }
       badge={ack && <StageBadge provider={ack.provider} mode={ack.provider_mode} />}
     >
       <div className="mx-auto flex h-full max-w-2xl flex-col justify-center gap-5">
         {ack ? (
           <>
-            {/* ack text */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
               <div className="mb-2 flex items-center gap-2 text-2xs font-semibold uppercase tracking-wider text-accent-glow">
                 <Sparkles className="h-3.5 w-3.5" /> {ack.ai_generated_label}
@@ -519,30 +551,27 @@ export function ReplyScene({ d, onDone, onFollowUpAnswered }: SceneProps) {
               </p>
             </div>
 
-            {/* ack audio */}
             {ack.audio_url ? (
               <div className="flex items-center gap-3">
-                <audio ref={el} src={ack.audio_url} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
-                <Button onClick={() => (playing ? el.current?.pause() : void el.current?.play())}>
-                  <Volume2 className="h-4 w-4" /> {playing ? "Pause" : "Hear the reply"}
+                <audio ref={el} src={reply.src ?? undefined} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
+                <Button disabled={!reply.src} onClick={() => (playing ? el.current?.pause() : void el.current?.play())}>
+                  <Volume2 className="h-4 w-4" /> {playing ? "Pause" : reply.error ? "Audio unavailable" : "Hear the reply"}
                 </Button>
               </div>
             ) : (
               <p className="text-xs text-ink-3">Text only — voice playback needs the speech service.</p>
             )}
 
-            {/* agentic follow-up */}
             {followUp && (
               <motion.div
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.4, duration: 0.5 }}
-                className="rounded-2xl border border-[#f59e0b]/30 bg-[#f59e0b]/[0.05] overflow-hidden"
+                transition={{ delay: 0.6, duration: 0.5 }}
+                className="overflow-hidden rounded-2xl border border-[#f59e0b]/30 bg-[#f59e0b]/[0.05]"
               >
-                {/* header */}
-                <div className="border-b border-[#f59e0b]/15 px-4 pt-4 pb-3">
+                <div className="border-b border-[#f59e0b]/15 px-4 pb-3 pt-4">
                   <div className="mb-2.5 flex items-center gap-2 text-2xs font-semibold uppercase tracking-wider text-[#f59e0b]">
-                    <HelpCircle className="h-3.5 w-3.5" /> Agentic follow-up — missing information
+                    <HelpCircle className="h-3.5 w-3.5" /> Missing information
                   </div>
                   <div className="mb-3 flex flex-wrap gap-1.5">
                     {(r.follow_up_missing_fields ?? []).map((f) => (
@@ -551,36 +580,40 @@ export function ReplyScene({ d, onDone, onFollowUpAnswered }: SceneProps) {
                       </span>
                     ))}
                   </div>
+                  <p className="mb-1.5 text-2xs uppercase tracking-wider text-ink-3">Questions to ask</p>
                   <ul className="space-y-2">
                     {(r.follow_up_questions ?? []).map((q, i) => (
-                      <motion.li key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.6 + i * 0.2 }} className="flex items-start gap-2 text-sm text-ink-2">
+                      <li key={i} className="flex items-start gap-2 text-sm text-ink-2">
                         <span className="mt-0.5 h-4 w-4 shrink-0 rounded-full bg-[#f59e0b]/20 text-center text-2xs leading-4 text-[#f59e0b]">{i + 1}</span>
                         {q}
-                      </motion.li>
+                      </li>
                     ))}
                   </ul>
                 </div>
 
-                {/* answer recorder */}
-                <div className="px-4 py-4">
+                <div className="space-y-3 px-4 py-4">
                   {answerSent ? (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-sm text-[#f59e0b]">
-                      <span className="h-2 w-2 rounded-full bg-[#f59e0b] animate-pulse" />
-                      Answer submitted — starting follow-up pipeline…
-                    </motion.div>
+                    <div className="flex items-center gap-2 text-sm text-[#f59e0b]">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-[#f59e0b]" />
+                      Answer added to {r.id} — updating the results…
+                    </div>
                   ) : (
                     <>
-                      <p className="mb-3 text-xs text-ink-3">
+                      <p className="text-xs text-ink-3">
                         <Mic className="mb-0.5 mr-1 inline h-3 w-3" />
-                        Record your answer — it will run through the full pipeline again to fill in the missing details.
+                        Record the answer, or type it. It is merged into this report and the pipeline runs again on it.
                       </p>
-                      <AudioRecorder
-                        onRecorded={async (wav) => {
-                          const report = await api.uploadReport(wav, "followup.wav", lang, "recording");
-                          setAnswerSent(true);
-                          onFollowUpAnswered?.(report.id);
-                        }}
-                      />
+                      <AudioRecorder onRecorded={(wav) => submit({ audio: wav })} />
+                      <div className="flex gap-2">
+                        <Textarea rows={2} value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="…or type the answer" />
+                        <Button variant="primary" busy={busy} disabled={!typed.trim()} onClick={() => void submit({ text: typed.trim() })}>
+                          Add
+                        </Button>
+                      </div>
+                      {err && <p className="text-xs text-[#f3b0b0]">{err}</p>}
+                      <button onClick={onDone} className="text-xs text-ink-3 underline-offset-4 hover:text-ink hover:underline">
+                        Skip — show the results without answering
+                      </button>
                     </>
                   )}
                 </div>
@@ -596,25 +629,102 @@ export function ReplyScene({ d, onDone, onFollowUpAnswered }: SceneProps) {
 }
 
 /* Finale ───────────────────────────────────────────────────────────────── */
-export function FinaleStats({ d }: { d: JourneyData }) {
-  const total = Object.values(d.jobs).reduce((a, j) => a + (j.duration_ms ?? 0), 0);
-  const inc = d.incident;
+const STAGE_NAMES: Record<string, string> = {
+  audio_prep: "Audio clean-up",
+  transcription: "Speech to text",
+  extraction: "Fact extraction",
+  confidence_gate: "Confidence check",
+  deduplication: "Duplicate matching",
+  priority: "Priority scoring",
+  follow_up: "Missing-info check",
+};
+
+function Tile({ k, v, hint, icon }: { k: string; v: string; hint?: string; icon?: ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {[
-        ["Pipeline time", `${(total / 1000).toFixed(1)} s`],
-        ["People", inc ? peopleText(inc) : "—"],
-        ["Calls grouped", String(inc?.report_count ?? 1)],
-        ["Priority", (inc?.priority_label ?? "—").toUpperCase()],
-      ].map(([k, v]) => (
-        <div key={k} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
-          <div className="text-2xs uppercase tracking-wider text-ink-3">{k}</div>
-          <div className="mt-0.5 flex items-center gap-1 font-mono text-xl font-semibold">
-            {k === "People" && <Users className="h-4 w-4 text-ink-3" />}
-            {v}
-          </div>
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left">
+      <div className="text-2xs uppercase tracking-wider text-ink-3">{k}</div>
+      <div className="mt-0.5 flex items-center gap-1 font-mono text-xl font-semibold">
+        {icon}
+        {v}
+      </div>
+      {hint && <div className="mt-0.5 truncate text-2xs text-ink-3">{hint}</div>}
+    </div>
+  );
+}
+
+/** What this call produced, from the real job records and facts. Nothing here is simulated. */
+export function FinaleStats({ d }: { d: JourneyData }) {
+  const stats = usePoll(api.stats, 0);
+  const r = d.report;
+  const inc = d.incident;
+  const ext = r?.extraction_current;
+  const jobs = Object.values(d.jobs).filter((j) => j.duration_ms != null);
+  const total = jobs.reduce((a, j) => a + (j.duration_ms ?? 0), 0);
+  const slowest = Math.max(1, ...jobs.map((j) => j.duration_ms ?? 0));
+  const missing = r?.follow_up_missing_fields ?? [];
+  const facts: [string, boolean, string][] = ext
+    ? [
+        ["Where", !!(ext.location.place_name || ext.location.landmark), [ext.location.place_name, ext.location.landmark].filter(Boolean).join(" · ") || "Not stated"],
+        ["What happened", ext.disaster_type !== "unknown", label(ext.disaster_type)],
+        ["How many people", ext.people_affected.count != null, ext.people_affected.count != null ? String(ext.people_affected.count) : "Unknown"],
+      ]
+    : [];
+  return (
+    <div className="space-y-4 text-left">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Tile k="Pipeline time" v={`${(total / 1000).toFixed(1)} s`} hint={`${jobs.length} stages`} />
+        <Tile k="Priority" v={(inc?.priority_label ?? "—").toUpperCase()} hint={inc ? `score ${Math.round(inc.priority_score)}` : undefined} />
+        <Tile k="People" v={inc ? peopleText(inc) : "—"} icon={<Users className="h-4 w-4 text-ink-3" />} />
+        <Tile k="Calls grouped" v={String(inc?.report_count ?? 1)} hint={inc?.id} />
+      </div>
+
+      {facts.length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="mb-2 text-2xs uppercase tracking-wider text-ink-3">What the system understood</div>
+          <ul className="grid gap-2 sm:grid-cols-3">
+            {facts.map(([name, ok, value]) => (
+              <li key={name} className="flex items-start gap-2 text-sm">
+                <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", ok ? "bg-status-good" : "bg-status-warning")} />
+                <span>
+                  <span className="block text-2xs text-ink-3">{name}</span>
+                  <span className={ok ? "text-ink" : "text-ink-3"}>{value}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          {missing.length > 0 && (
+            <p className="mt-3 text-xs text-[#f6c75a]">
+              Still missing: {missing.map((f) => MISSING_LABEL[f] ?? f).join(", ")}.
+              {r?.follow_up_channel ? "" : " No one has contacted the caller; a dispatcher needs to find this out."}
+            </p>
+          )}
         </div>
-      ))}
+      )}
+
+      {jobs.length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="mb-2 text-2xs uppercase tracking-wider text-ink-3">Where the time went</div>
+          <ul className="space-y-2">
+            {jobs.map((j) => (
+              <li key={j.id} className="grid grid-cols-[9.5rem_1fr_4.5rem] items-center gap-3 text-xs">
+                <span className="truncate text-ink-2">{STAGE_NAMES[j.stage] ?? label(j.stage)}</span>
+                <span className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.max(2, ((j.duration_ms ?? 0) / slowest) * 100)}%` }} />
+                </span>
+                <span className="text-right font-mono text-ink-2">{Math.round(j.duration_ms ?? 0)} ms</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {stats.data && (
+        <div className="grid grid-cols-3 gap-3">
+          <Tile k="Active incidents" v={String(stats.data.unique_incidents)} hint="right now" />
+          <Tile k="Critical" v={String(stats.data.critical_incidents)} hint="right now" />
+          <Tile k="Reports received" v={String(stats.data.total_reports)} hint="all time" />
+        </div>
+      )}
     </div>
   );
 }

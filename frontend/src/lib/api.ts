@@ -19,6 +19,14 @@ import type {
 
 export const UNAUTHORIZED_EVENT = "aa:unauthorized";
 
+export type ResolveReason = "rescued" | "false_alarm" | "handled_elsewhere" | "duplicate";
+export const RESOLVE_REASONS: { value: ResolveReason; label: string }[] = [
+  { value: "rescued", label: "Rescued / help reached" },
+  { value: "false_alarm", label: "False alarm" },
+  { value: "handled_elsewhere", label: "Handled by another agency" },
+  { value: "duplicate", label: "Duplicate of another incident" },
+];
+
 export interface Session {
   authenticated: boolean;
   username: string | null;
@@ -57,6 +65,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(detail, res.status);
   }
   return res.json() as Promise<T>;
+}
+
+/**
+ * Audio needs its own loader: an <audio src> or plain fetch cannot send the tunnel's skip-warning header,
+ * so through ngrok the browser got an HTML warning page instead of the recording ("Unable to decode audio data").
+ */
+export async function fetchAudio(path: string): Promise<Blob> {
+  let res: Response;
+  try {
+    res = await fetch(path, { headers: { "ngrok-skip-browser-warning": "1" }, credentials: "same-origin" });
+  } catch {
+    throw new ApiError("Could not reach the server to load the audio.", 0);
+  }
+  if (res.status === 401) throw new ApiError("Log in again to play this audio.", 401);
+  if (res.status === 410) throw new ApiError("The audio file is no longer on the server.", 410);
+  if (!res.ok) throw new ApiError(`Audio could not be loaded (${res.status}).`, res.status);
+  const blob = await res.blob();
+  if (blob.type.startsWith("text/")) throw new ApiError("The server sent a web page instead of audio.", res.status);
+  return blob;
 }
 
 const json = (body: unknown): RequestInit => ({
@@ -99,6 +126,16 @@ export const api = {
     fd.append("source", source);
     return request<ReportDetail>("/api/reports/upload", { method: "POST", body: fd });
   },
+  /** Answer a follow-up question. The answer joins THIS report (it never starts a new one) and it is reprocessed. */
+  answerFollowup: (id: string, answer: { audio?: Blob; text?: string }) => {
+    const fd = new FormData();
+    if (answer.audio) fd.append("file", answer.audio, "followup.wav");
+    if (answer.text) fd.append("text", answer.text);
+    return request<{ id: string; status: string; answer: string; field_filled: boolean; answered_field: string }>(
+      `/api/reports/${encodeURIComponent(id)}/followup`,
+      { method: "POST", body: fd },
+    );
+  },
   processReport: (id: string) => request<{ id: string; status: string }>(`/api/reports/${id}/process`, { method: "POST" }),
   submitTranscript: (id: string, text: string, reviewer: string, language_hint?: string | null) =>
     request<ReportDetail>(`/api/reports/${id}/transcript`, json({ text, reviewer, language_hint: language_hint || null, process: true })),
@@ -107,6 +144,10 @@ export const api = {
     request<Paged<Incident>>(`/api/incidents${qs(params)}`),
   incident: (id: string) => request<IncidentDetail>(`/api/incidents/${encodeURIComponent(id)}`),
   review: (id: string, body: Record<string, unknown>) => request<IncidentDetail>(`/api/incidents/${id}/review`, json(body)),
+  resolveIncident: (id: string, reason: ResolveReason, reviewer: string, notes?: string) =>
+    request<IncidentDetail>(`/api/incidents/${encodeURIComponent(id)}/resolve`, json({ reason, reviewer, notes: notes || null })),
+  reopenIncident: (id: string, reviewer: string, notes?: string) =>
+    request<IncidentDetail>(`/api/incidents/${encodeURIComponent(id)}/reopen`, json({ reviewer, notes: notes || null })),
   merge: (id: string, sources: string[], reviewer: string, notes?: string) =>
     request<IncidentDetail>(`/api/incidents/${id}/merge`, json({ source_incident_ids: sources, reviewer, notes: notes || null })),
   split: (id: string, reportIds: string[], reviewer: string, notes?: string) =>

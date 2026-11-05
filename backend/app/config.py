@@ -113,6 +113,10 @@ class Settings:
     twilio_auth_token: str = field(repr=False)   # TWILIO_AUTH_TOKEN
     twilio_phone_number: str                     # TWILIO_PHONE_NUMBER
 
+    # Behind a reverse proxy (Caddy, nginx, a tunnel) every client looks like the proxy's address, which would make
+    # the per-address live-call limits count everyone as one person. Only set this when a proxy you run is in front.
+    trust_proxy: bool = False  # TRUST_PROXY
+
     @property
     def gnani_key_configured(self) -> bool:
         return bool(self.gnani_api_key)
@@ -193,6 +197,7 @@ def load_settings() -> Settings:
         twilio_account_sid=_env("TWILIO_ACCOUNT_SID"),
         twilio_auth_token=_env("TWILIO_AUTH_TOKEN"),
         twilio_phone_number=_env("TWILIO_PHONE_NUMBER", "+17372508034"),
+        trust_proxy=_env_bool("TRUST_PROXY", False),
     )
 
 

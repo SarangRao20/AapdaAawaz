@@ -124,7 +124,9 @@ def refresh_incident(db: Session, inc: models.Incident, cfg: dict) -> None:
             s.status, s.resolved_at, s.resolved_by = "obsolete", utcnow(), "system"
             s.note = f"incident {inc.id} no longer has reports"
         return
-    if inc.status != "active":
+    # A dispatcher-resolved incident stays closed when one of its reports is reprocessed; only "reopen" revives it.
+    resolved_by_human = inc.status == "closed" and bool((inc.human_overrides or {}).get("resolution"))
+    if inc.status != "active" and not resolved_by_human:
         inc.status, inc.merged_into_id = "active", None
     overrides = dict(inc.human_overrides or {})
     agg = aggregation.aggregate([member_view(r) for _, r in members], overrides, cfg)
