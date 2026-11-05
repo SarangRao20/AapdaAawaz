@@ -1,0 +1,17 @@
+# Caddy on the VM: HTTPS (Let's Encrypt), the dashboard, and /api (incl. WebSockets) on ONE origin.
+# __SITE__ and __ROOT__ are filled in by deploy/setup-caddy.sh.
+__SITE__ {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+	handle /tiles/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+	handle {
+		root * __ROOT__
+		try_files {path} /index.html
+		file_server
+	}
+}

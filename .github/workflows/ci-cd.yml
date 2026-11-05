@@ -156,6 +156,35 @@ jobs:
             "bash -s -- ~/aapda/.deploy/incoming/backend.tar.gz ${{ github.sha }}" \
             < .github/scripts/remote_deploy.sh
 
+      # The dashboard is served by Caddy on the VM, same origin as /api (see deploy/setup-caddy.sh).
+      # No VITE_API_TARGET / VITE_WS_ORIGIN: the browser uses relative /api URLs.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build dashboard
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          tar -czf "$RUNNER_TEMP/frontend.tar.gz" -C dist .
+
+      - name: Deploy dashboard
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          scp $SCP_OPTS "$RUNNER_TEMP/frontend.tar.gz" "$VM_USER@$VM_HOST:~/aapda/.deploy/incoming/frontend.tar.gz"
+          ssh $SSH_OPTS "$VM_USER@$VM_HOST" 'set -e
+            D=$HOME/aapda/frontend-dist
+            rm -rf "$D.new" "$D.old"; mkdir -p "$D.new"
+            tar -xzf $HOME/aapda/.deploy/incoming/frontend.tar.gz -C "$D.new"
+            [ -f "$D.new/index.html" ] || { echo "frontend artifact has no index.html"; exit 1; }
+            [ -d "$D" ] && mv "$D" "$D.old"
+            mv "$D.new" "$D"; rm -rf "$D.old"'
+
       - name: Public reachability check (informational)
         continue-on-error: true
         env:
