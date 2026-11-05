@@ -128,6 +128,9 @@ def report_detail(db: Session, rep: models.Report) -> dict:
         "follow_up_questions": rep.follow_up_questions or [],
         "follow_up_missing_fields": rep.follow_up_missing_fields or [],
         "follow_up_status": rep.follow_up_status,
+        # Which channel can really reach the caller. Uploads, recordings and typed reports have none: their
+        # follow-up questions are only suggestions for a dispatcher, and nobody has been contacted.
+        "follow_up_channel": "telegram" if conv else ("live_call" if rep.source == "live_call" else None),
         # The chat id stays out: a dispatcher needs the state of the conversation, not the caller's identity.
         "telegram": ({"state": conv.state, "pending_field": conv.pending_field, "attempts": conv.attempts,
                       "skipped_fields": conv.skipped_fields or [], "next_followup_at": iso(conv.next_followup_at),

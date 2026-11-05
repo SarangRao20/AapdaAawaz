@@ -1,11 +1,13 @@
-import { AlertTriangle, ArrowLeft, GitMerge, MapPin, Pause, Play, Scissors, Sparkles, Volume2, Zap } from "lucide-react";
-import { Suspense, lazy, useRef, useMemo, useState } from "react";
+import { AlertTriangle, ArrowLeft, GitMerge, MapPin, Scissors, Sparkles, Volume2, Zap } from "lucide-react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { AudioClip } from "../components/AudioClip";
 import { ConfidenceBadge, LocationBadge, ModeBadge, PriorityBadge, ReviewBadge } from "../components/badges";
 import { ExtractionView } from "../components/ExtractionView";
 import { IncidentMap } from "../components/IncidentMap";
 import { IncidentQueue } from "../components/IncidentQueue";
 import { PriorityExplain } from "../components/PriorityExplain";
+import { ResolveIncident } from "../components/ResolveIncident";
 import { ReviewForm } from "../components/ReviewForm";
 import { MatchEvidenceTable, SuggestionCard } from "../components/SuggestionCard";
 import { Badge, Button, Card, CardHeader, Empty, ErrorBanner, Input, KV, Spinner } from "../components/ui";
@@ -19,8 +21,6 @@ import { usePoll } from "../lib/usePoll";
 const SiteView3D = lazy(() => import("../components/SiteView3D"));
 
 function AckPanel({ reportId, initial }: { reportId: string; initial: Acknowledgement | null }) {
-  const el = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
   const [ack, setAck] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -58,12 +58,8 @@ function AckPanel({ reportId, initial }: { reportId: string; initial: Acknowledg
       <p className="text-ink-2 leading-relaxed">{ack.text}</p>
       {ack.audio_url ? (
         <div className="mt-2 flex items-center gap-2">
-          <audio ref={el} src={ack.audio_url} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />
-          <Button size="sm" onClick={() => (playing ? el.current?.pause() : void el.current?.play())}>
-            {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-            {playing ? "Pause" : "Play voice reply"}
-          </Button>
-          <span className="text-2xs text-ink-3">Timbre TTS · {ack.language}</span>
+          <AudioClip url={ack.audio_url} filename={`${reportId}-reply.wav`} />
+          <span className="shrink-0 text-2xs text-ink-3">Timbre TTS · {ack.language}</span>
         </div>
       ) : (
         <p className="mt-1.5 flex items-center gap-1.5 text-2xs text-ink-3">
@@ -148,6 +144,7 @@ function IncidentDetailPage({ id }: { id: string }) {
             Go to {i.merged_into_id}
           </Button>
         )}
+        <ResolveIncident incident={i} onChanged={() => void inc.refresh()} />
       </div>
       {error && <ErrorBanner message={error} />}
 
@@ -268,7 +265,7 @@ function IncidentDetailPage({ id }: { id: string }) {
                       <span className="w-full truncate text-xs text-ink-2 group-open:hidden">"{r.transcript}"</span>
                     </summary>
                     <div className="mt-3 space-y-3">
-                      {r.audio[0] && <audio controls preload="none" src={r.audio[0].url} className="h-8 w-full" />}
+                      {r.audio[0] && <AudioClip url={r.audio[0].url} filename={r.audio[0].original_filename} />}
                       <blockquote className="whitespace-pre-line rounded-md border border-line bg-surface-2 px-3 py-2 text-sm text-ink" lang={r.language ?? undefined}>
                         {r.transcript}
                       </blockquote>

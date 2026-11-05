@@ -1,52 +1,55 @@
-import { Pause, Play } from "lucide-react";
+import { Download, Pause, Play } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAudioUrl } from "../lib/useAudioUrl";
 
 interface WaveformPlayerProps {
+  /** API path of the recording. It is downloaded once (with credentials) and played from memory. */
   src: string;
+  filename?: string;
 }
 
-export function WaveformPlayer({ src }: WaveformPlayerProps) {
+export function WaveformPlayer({ src, filename }: WaveformPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
+  const source = useAudioUrl(src);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [decoding, setDecoding] = useState(true);
   const [waveform, setWaveform] = useState<Float32Array | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [decodeError, setDecodeError] = useState<string | null>(null);
+  const loading = source.loading || (!source.error && decoding);
+  const error = source.error ?? decodeError;
 
-  // Decode audio data and build waveform once
+  // Decode the downloaded recording and build the waveform once. The player still works if drawing fails.
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     setWaveform(null);
-
-    fetch(src)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.arrayBuffer();
-      })
-      .then((buf) => {
-        const ctx = new AudioContext();
-        return ctx.decodeAudioData(buf);
-      })
+    setDecodeError(null);
+    if (!source.blob) {
+      setDecoding(!source.error);
+      return;
+    }
+    setDecoding(true);
+    const ctx = new AudioContext();
+    source.blob
+      .arrayBuffer()
+      .then((buf) => ctx.decodeAudioData(buf))
       .then((audioBuffer) => {
-        if (cancelled) return;
-        setWaveform(audioBuffer.getChannelData(0));
-        setLoading(false);
+        if (!cancelled) setWaveform(audioBuffer.getChannelData(0));
       })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : "Failed to load audio");
-        setLoading(false);
+      .catch(() => {
+        if (!cancelled) setDecodeError("This browser could not draw the waveform. The recording can still be played or downloaded.");
+      })
+      .finally(() => {
+        if (!cancelled) setDecoding(false);
+        void ctx.close().catch(() => undefined);
       });
-
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [source.blob, source.error]);
 
   // Draw waveform
   const draw = useCallback(
@@ -132,7 +135,7 @@ export function WaveformPlayer({ src }: WaveformPlayerProps) {
     <div className="rounded-xl border border-white/10 bg-surface-2 p-3 space-y-2">
       <audio
         ref={audioRef}
-        src={src}
+        src={source.src ?? undefined}
         preload="metadata"
         onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration)}
         onPlay={() => setPlaying(true)}
@@ -158,7 +161,7 @@ export function WaveformPlayer({ src }: WaveformPlayerProps) {
         </div>
       )}
 
-      {!loading && !error && (
+      {!loading && waveform && (
         <canvas
           ref={canvasRef}
           width={600}
@@ -173,7 +176,7 @@ export function WaveformPlayer({ src }: WaveformPlayerProps) {
       <div className="flex items-center gap-3">
         <button
           onClick={toggle}
-          disabled={loading || !!error}
+          disabled={!source.src}
           aria-label={playing ? "Pause" : "Play"}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-white transition-opacity disabled:opacity-40 hover:opacity-90"
         >
@@ -182,6 +185,11 @@ export function WaveformPlayer({ src }: WaveformPlayerProps) {
         <span className="font-mono text-xs text-ink-3 tabular-nums">
           {fmt(currentTime)} / {fmt(duration)}
         </span>
+        {source.src && (
+          <a href={source.src} download={filename ?? "recording"} className="ml-auto inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-2xs text-ink-2 hover:bg-white/5 hover:text-ink">
+            <Download className="h-3 w-3" aria-hidden /> Download
+          </a>
+        )}
       </div>
     </div>
   );

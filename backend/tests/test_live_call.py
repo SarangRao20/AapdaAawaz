@@ -392,3 +392,46 @@ def test_the_caller_app_origin_is_allowed(public):
         until_listening(ws)
         ws.send_text(json.dumps({"type": "end"}))
         read_until(ws, "done")
+
+
+# ---- tickets: a socket on another host cannot carry the dashboard's login cookie --------------------------
+def test_a_ticket_needs_a_login(call):
+    assert TestClient(app).post("/api/live/ticket").status_code == 401
+    body = call.post("/api/live/ticket").json()
+    assert body["ticket"] and body["expires_in"] == 60
+
+
+def test_a_ticket_opens_a_call_without_the_cookie_even_when_public_calls_are_off(call):
+    assert settings.live_public is False
+    ticket = call.post("/api/live/ticket").json()["ticket"]
+    with TestClient(app).websocket_connect(f"/api/live/call?ticket={ticket}") as ws:
+        ws.send_text(json.dumps({"type": "start", "language": "en"}))
+        until_listening(ws)
+        ws.send_text(json.dumps({"type": "end"}))
+        read_until(ws, "done")
+
+
+def test_forged_and_expired_tickets_are_refused(call):
+    from app import auth
+
+    with pytest.raises(WebSocketDisconnect):
+        with TestClient(app).websocket_connect("/api/live/call?ticket=forged.ticket"):
+            pass
+    old = auth.create_ws_ticket(now=1_000.0)
+    assert auth.valid_ws_ticket(old, now=1_030.0)
+    assert not auth.valid_ws_ticket(old, now=1_061.0)  # a minute is all it lasts
+    payload, signature = old.split(".")
+    assert not auth.valid_ws_ticket(f"{payload}.{signature[::-1]}", now=1_030.0)
+    # A login session token is not a ticket, and a ticket is not a login session.
+    assert not auth.valid_ws_ticket(auth.create_session("admin"))
+    assert auth.session_username(auth.create_ws_ticket()) is None
+
+
+def test_behind_a_trusted_proxy_the_forwarded_address_is_the_caller(call, monkeypatch):
+    class Socket:
+        client = type("C", (), {"host": "10.0.0.1"})()
+        headers = {"x-forwarded-for": "203.0.113.9, 10.0.0.1"}
+
+    assert live.client_address(Socket()) == "10.0.0.1"  # not trusted by default: anyone can send that header
+    monkeypatch.setattr(live, "settings", replace(settings, trust_proxy=True))
+    assert live.client_address(Socket()) == "203.0.113.9"

@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from .. import models
 from ..db import get_db
 from ..providers.base import ProviderError, ProviderUnavailable
-from ..schemas import IncidentReviewRequest, MergeRequest, SplitRequest, SuggestionDecision
+from ..schemas import (IncidentReopenRequest, IncidentResolveRequest, IncidentReviewRequest, MergeRequest,
+                       SplitRequest, SuggestionDecision)
 from ..services import priority as prio
 from ..services import review as review_svc
 from ..services import voice_alerts
@@ -98,7 +99,19 @@ def review(incident_id: str, body: IncidentReviewRequest, db: Session = Depends(
     return incident_detail(db, inc)
 
 
-@router.post("/incidents/{incident_id}/merge", summary="Merge other incidents (and all their reports) into this one")
+@router.post("/incidents/{incident_id}/resolve", summary="Close an incident that responders have dealt with")
+def resolve(incident_id: str, body: IncidentResolveRequest, db: Session = Depends(get_db)):
+    inc = _run(review_svc.resolve_incident, db, incident_id, body)
+    return incident_detail(db, inc)
+
+
+@router.post("/incidents/{incident_id}/reopen", summary="Put a closed incident back on the board")
+def reopen(incident_id: str, body: IncidentReopenRequest, db: Session = Depends(get_db)):
+    inc = _run(review_svc.reopen_incident, db, incident_id, body)
+    return incident_detail(db, inc)
+
+
+@router.post("/incidents/{incident_id}/merge",summary="Merge other incidents (and all their reports) into this one")
 def merge(incident_id: str, body: MergeRequest, db: Session = Depends(get_db)):
     inc = _run(review_svc.merge_incidents, db, incident_id, body)
     return incident_detail(db, inc)

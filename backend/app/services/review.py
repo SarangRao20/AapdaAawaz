@@ -7,10 +7,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
-from ..schemas import IncidentReviewRequest, MergeRequest, SplitRequest, TranscriptSubmit
+from ..schemas import (IncidentReopenRequest, IncidentResolveRequest, IncidentReviewRequest, MergeRequest,
+                       SplitRequest, TranscriptSubmit)
 from .gazetteer import load_gazetteer
-from .pipeline import (PIPELINE_LOCK, active_members, audit, create_incident, refresh_incident,
-                       update_report_gate, utcnow)
+from .pipeline import (PIPELINE_LOCK, active_members, audit, create_incident, pending_suggestions_for,
+                       refresh_incident, update_report_gate, utcnow)
 from .settings_store import get_config
 
 
@@ -106,6 +107,46 @@ def review_incident(db: Session, incident_id: str, req: IncidentReviewRequest) -
             for _, rep in active_members(db, inc.id):
                 rep.review_resolved = True
             refresh_incident(db, inc, cfg)
+        db.commit()
+        return inc
+
+
+def resolve_incident(db: Session, incident_id: str, req: IncidentResolveRequest) -> models.Incident:
+    """Close an incident (e.g. responders reached everyone). Reports stay linked and everything is audited,
+    so it can be reopened; it simply stops competing for attention on the live board."""
+    with PIPELINE_LOCK:
+        inc = _active_incident(db, incident_id)
+        resolution = {"reason": req.reason, "by": req.reviewer, "at": utcnow().isoformat(), "notes": req.notes}
+        overrides = dict(inc.human_overrides or {})
+        overrides["resolution"] = resolution
+        inc.human_overrides = overrides
+        audit(db, "incident", inc.id, "resolved", field="status", old="active", new="closed",
+              actor=req.reviewer, note=f"{req.reason}: {req.notes}" if req.notes else req.reason)
+        _record(db, incident_id=inc.id, reviewer=req.reviewer, action="resolve", notes=req.notes,
+                payload={"reason": req.reason})
+        inc.status, inc.updated_at = "closed", utcnow()
+        for s in pending_suggestions_for(db, inc.id):
+            s.status, s.resolved_at, s.resolved_by = "obsolete", utcnow(), req.reviewer
+            s.note = f"incident {inc.id} was resolved ({req.reason})"
+        db.commit()
+        return inc
+
+
+def reopen_incident(db: Session, incident_id: str, req: IncidentReopenRequest) -> models.Incident:
+    with PIPELINE_LOCK:
+        inc = db.get(models.Incident, incident_id)
+        if inc is None:
+            raise LookupError(f"incident {incident_id} not found")
+        if inc.status != "closed":
+            raise ReviewError(f"incident {incident_id} is {inc.status}, only a closed incident can be reopened")
+        overrides = dict(inc.human_overrides or {})
+        overrides.pop("resolution", None)
+        inc.human_overrides = overrides
+        inc.status = "active"
+        audit(db, "incident", inc.id, "reopened", field="status", old="closed", new="active",
+              actor=req.reviewer, note=req.notes)
+        _record(db, incident_id=inc.id, reviewer=req.reviewer, action="reopen", notes=req.notes)
+        refresh_incident(db, inc, get_config(db))
         db.commit()
         return inc
 

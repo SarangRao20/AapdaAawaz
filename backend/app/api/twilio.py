@@ -46,9 +46,10 @@ _EMPTY_RECORDING = {
     "hi": ("hi-IN", "हमें कोई आवाज़ नहीं मिली। यदि जान का खतरा है, तो कृपया तुरंत 112 पर कॉल करें।"),
     "en": ("en-IN", "We did not receive any audio. If a life is in danger, please call 112 now."),
 }
+# Deliberately says only what is true: the report is recorded. It does not claim anyone was alerted or is coming.
 _THANKS = {
-    "hi": ("hi-IN", "आपकी आपातकालीन रिपोर्ट दर्ज कर ली गई है। आपदा नियंत्रण कक्ष को सूचित कर दिया गया है।"),
-    "en": ("en-IN", "Your emergency report has been recorded and the disaster control room has been notified."),
+    "hi": ("hi-IN", "आपकी रिपोर्ट दर्ज कर ली गई है। यदि जान का खतरा है, तो कृपया तुरंत 112 पर कॉल करें।"),
+    "en": ("en-IN", "Your report has been recorded. If a life is in danger, please call 112 now."),
 }
 
 

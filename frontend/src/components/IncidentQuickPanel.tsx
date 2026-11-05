@@ -5,11 +5,12 @@ import { label, langLabel, locationText, peopleText, timeAgo } from "../lib/form
 import type { Incident } from "../lib/types";
 import { ConfidenceBadge, LocationBadge, PriorityBadge, ReviewBadge } from "./badges";
 import { PriorityExplain } from "./PriorityExplain";
+import { ResolveIncident } from "./ResolveIncident";
 import { Card, Empty, KV } from "./ui";
 
 type DetailTab = "overview" | "score";
 
-export function IncidentQuickPanel({ incident, onClose }: { incident: Incident | null; onClose?: () => void }) {
+export function IncidentQuickPanel({ incident, onClose, onChanged }: { incident: Incident | null; onClose?: () => void; onChanged?: () => void }) {
   const [tab, setTab] = useState<DetailTab>("overview");
   const [copied, setCopied] = useState(false);
   const copyLink = () => {
@@ -115,6 +116,9 @@ export function IncidentQuickPanel({ incident, onClose }: { incident: Incident |
             )}
           </div>
         )}
+      </div>
+      <div className="border-t border-line px-4 py-2.5">
+        <ResolveIncident incident={i} onChanged={() => { onChanged?.(); onClose?.(); }} />
       </div>
       <Link to={`/incidents/${i.id}`} className="flex items-center justify-center gap-1 border-t border-line py-2.5 text-sm text-accent hover:bg-surface-2">
         Open investigation <ArrowRight className="h-4 w-4" />

@@ -22,7 +22,7 @@ import time
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from ..auth import is_authenticated
+from ..auth import WS_TICKET_SECONDS, create_ws_ticket, is_authenticated, valid_ws_ticket
 from ..config import settings
 from ..providers.base import ProviderError, ProviderUnavailable
 from ..providers.gnani_stream import SAMPLE_RATE, PrismaStream, speak_stream
@@ -282,6 +282,20 @@ class LiveSession:
                 return
 
 
+def client_address(ws: WebSocket) -> str:
+    """Who is calling. Behind a trusted proxy that is the first X-Forwarded-For entry, not the proxy itself."""
+    if settings.trust_proxy:
+        forwarded = ws.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        if forwarded:
+            return forwarded
+    return ws.client.host if ws.client else "unknown"
+
+
+@router.post("/ticket", summary="A one-minute pass for opening the live-call WebSocket (needs a login)")
+def live_ticket():
+    return {"ticket": create_ws_ticket(), "expires_in": WS_TICKET_SECONDS}
+
+
 async def _refuse(ws: WebSocket, message: str, code: int = 4429) -> None:
     """Accept first so the caller app can show the reason instead of a generic handshake failure."""
     await ws.accept()
@@ -293,7 +307,8 @@ async def _refuse(ws: WebSocket, message: str, code: int = 4429) -> None:
 async def _admit(ws: WebSocket) -> tuple[bool, str | None]:
     """Who may start a call. Returns (allowed, address to release), and closes refused sockets."""
     # HTTP middleware doesn't run on WebSockets, and a call spends credits and stores a voice, so check here.
-    if is_authenticated(ws):
+    # A ticket comes from POST /api/live/ticket, which needs a login, so it counts the same as the cookie.
+    if is_authenticated(ws) or valid_ws_ticket(ws.query_params.get("ticket")):
         return True, None
     if not settings.live_public:
         await ws.close(code=4401)
@@ -304,7 +319,7 @@ async def _admit(ws: WebSocket) -> tuple[bool, str | None]:
         log.info("public live call refused for origin %s", origin)
         await _refuse(ws, "This app version is not allowed to start a call. Please update it.", code=4403)
         return False, None
-    address = ws.client.host if ws.client else "unknown"
+    address = client_address(ws)
     refusal = guard.allow(address)
     if refusal is None:
         return True, address

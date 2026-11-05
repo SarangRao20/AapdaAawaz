@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { LiveFeed } from "../components/LiveFeed";
 import { ReportDetailView } from "../components/ReportDetailView";
 import { UnifiedIntakeForm } from "../components/UnifiedIntakeForm";
-import { Card, CardHeader, Empty, ErrorBanner, Input, Select, Spinner } from "../components/ui";
+import { Button, Card, CardHeader, Empty, ErrorBanner, Input, Select, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { usePoll } from "../lib/usePoll";
 
@@ -20,6 +20,7 @@ export function Reports() {
   );
   const detail = usePoll(() => (selected ? api.report(selected) : Promise.resolve(null)), selected ? 2000 : 0, [selected]);
 
+  const [showForm, setShowForm] = useState(false);
   const [lang, setLang] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,21 +62,31 @@ export function Reports() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold">Incoming Reports</h1>
-        <p className="text-xs text-ink-3">Upload or record a voice note, or type a transcript. Processing runs in a background worker; this page polls for progress.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold">Incoming Reports</h1>
+          <p className="text-xs text-ink-3">
+            Everything that came in. Live calls, Telegram chats and caller-app recordings appear here on their own, with their audio;
+            you do not need to upload anything. Processing runs in a background worker and this page polls for progress.
+          </p>
+        </div>
+        <Button size="sm" variant={showForm ? "ghost" : "secondary"} onClick={() => setShowForm((v) => !v)}>
+          {showForm ? "Hide manual entry" : "Add a report by hand"}
+        </Button>
       </div>
       <div className="grid gap-4 xl:grid-cols-[440px_1fr]">
         <div className="space-y-4">
-          <UnifiedIntakeForm
-            lang={lang}
-            onLangChange={setLang}
-            onUpload={handleUpload}
-            onRecorded={handleRecorded}
-            onTypeSubmit={handleTypeSubmit}
-            error={error}
-            busy={busy}
-          />
+          {showForm && (
+            <UnifiedIntakeForm
+              lang={lang}
+              onLangChange={setLang}
+              onUpload={handleUpload}
+              onRecorded={handleRecorded}
+              onTypeSubmit={handleTypeSubmit}
+              error={error}
+              busy={busy}
+            />
+          )}
           <Card>
             <CardHeader
               title="Reports"
