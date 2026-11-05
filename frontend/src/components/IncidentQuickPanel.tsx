@@ -7,7 +7,10 @@ import { ConfidenceBadge, LocationBadge, PriorityBadge, ReviewBadge } from "./ba
 import { PriorityExplain } from "./PriorityExplain";
 import { Card, Empty, KV } from "./ui";
 
+type DetailTab = "overview" | "score";
+
 export function IncidentQuickPanel({ incident, onClose }: { incident: Incident | null; onClose?: () => void }) {
+  const [tab, setTab] = useState<DetailTab>("overview");
   const [copied, setCopied] = useState(false);
   const copyLink = () => {
     const url = `${window.location.origin}/incidents/${incident?.id}`;
@@ -53,41 +56,63 @@ export function IncidentQuickPanel({ incident, onClose }: { incident: Incident |
           )}
         </div>
       </div>
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-line px-4">
+        {(["overview", "score"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+              tab === t ? "border-accent text-ink" : "border-transparent text-ink-3 hover:text-ink"
+            }`}
+          >
+            {t === "overview" ? "Overview" : "Score & Audit"}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        <dl>
-          <KV k="Location">
-            {locationText(i)}
-            {i.coordinates_are_simulated && <div className="text-2xs text-ink-3">Map point = reference location, not the exact spot.</div>}
-            {!i.latitude && (
-              <div className="inline-flex items-center gap-1 text-2xs text-[#f6c75a]">
-                <MapPinOff className="h-3 w-3" /> Not on the map until a dispatcher verifies the location.
+        {tab === "overview" && (
+          <dl>
+            <KV k="Location">
+              {locationText(i)}
+              {i.coordinates_are_simulated && <div className="text-2xs text-ink-3">Map point = reference location, not the exact spot.</div>}
+              {!i.latitude && (
+                <div className="inline-flex items-center gap-1 text-2xs text-[#f6c75a]">
+                  <MapPinOff className="h-3 w-3" /> Not on the map until a dispatcher verifies the location.
+                </div>
+              )}
+            </KV>
+            <KV k="People reported">{peopleText(i)}</KV>
+            <KV k="Vulnerable">{Object.keys(i.vulnerable).length ? Object.keys(i.vulnerable).map(label).join(", ") : "None mentioned (unknown)"}</KV>
+            <KV k="Dangers">{i.dangers.length ? i.dangers.map(label).join(", ") : "—"}</KV>
+            <KV k="Needs">{i.needs.length ? i.needs.map(label).join(", ") : "—"}</KV>
+            <KV k="Caller urgency">{i.urgency}</KV>
+            <KV k="Hazard">{i.disaster_type}</KV>
+            <KV k="Languages">{i.languages.map(langLabel).join(", ") || "—"}</KV>
+            <KV k="Latest update">{timeAgo(i.last_report_at)} · {i.report_count} report(s)</KV>
+          </dl>
+        )}
+
+        {tab === "score" && (
+          <div className="space-y-3">
+            {i.priority_breakdown && <PriorityExplain b={i.priority_breakdown} compact />}
+            {i.review_reasons.length > 0 && (
+              <div className="rounded-md border border-[#5b4413] bg-[#221c0e] px-3 py-2 text-xs text-[#f6c75a]">
+                <div className="mb-1 font-semibold">Why human review is needed</div>
+                <ul className="list-disc space-y-0.5 pl-4">
+                  {i.review_reasons.map((r, idx) => (
+                    <li key={idx}>{r.message}</li>
+                  ))}
+                </ul>
               </div>
             )}
-          </KV>
-          <KV k="People reported">{peopleText(i)}</KV>
-          <KV k="Vulnerable">{Object.keys(i.vulnerable).length ? Object.keys(i.vulnerable).map(label).join(", ") : "None mentioned (unknown)"}</KV>
-          <KV k="Dangers">{i.dangers.length ? i.dangers.map(label).join(", ") : "—"}</KV>
-          <KV k="Needs">{i.needs.length ? i.needs.map(label).join(", ") : "—"}</KV>
-          <KV k="Caller urgency">{i.urgency}</KV>
-          <KV k="Hazard">{i.disaster_type}</KV>
-          <KV k="Languages">{i.languages.map(langLabel).join(", ") || "—"}</KV>
-          <KV k="Latest update">{timeAgo(i.last_report_at)} · {i.report_count} report(s)</KV>
-        </dl>
-        {i.priority_breakdown && <PriorityExplain b={i.priority_breakdown} compact />}
-        {i.review_reasons.length > 0 && (
-          <div className="rounded-md border border-[#5b4413] bg-[#221c0e] px-3 py-2 text-xs text-[#f6c75a]">
-            <div className="mb-1 font-semibold">Why human review is needed</div>
-            <ul className="list-disc space-y-0.5 pl-4">
-              {i.review_reasons.map((r, idx) => (
-                <li key={idx}>{r.message}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {i.recommended_action && (
-          <div className="text-xs text-ink-2">
-            <span className="text-ink-3">Suggested next human action: </span>
-            {i.recommended_action}
+            {i.recommended_action && (
+              <div className="text-xs text-ink-2">
+                <span className="text-ink-3">Suggested next human action: </span>
+                {i.recommended_action}
+              </div>
+            )}
           </div>
         )}
       </div>
