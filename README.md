@@ -257,3 +257,4 @@ backend/  app/ (api, providers, services, config.py, db.py, models.py, schemas.p
 frontend/ src/ (pages, components, lib)  package.json  vite.config.ts  tailwind.config.js
 docs/     ARCHITECTURE.md API.md SAFETY.md EVALUATION.md DEMO_SCRIPT.md KNOWN_LIMITATIONS.md
 ```
+Aapda Aawaz
