@@ -3,9 +3,10 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm install",
-  "env": {
-    "VITE_API_TARGET": "http://172.198.152.160:8000"
-  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://flatfoot-errand-armored.ngrok-free.dev/api/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "git": {
     "deploymentEnabled": {
       "main": true

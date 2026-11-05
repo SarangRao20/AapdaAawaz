@@ -37,7 +37,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     const url = API_BASE ? `${API_BASE}${path}` : path;
-    res = await fetch(url, init);
+    // Same-origin via the Vercel /api rewrite; the header skips ngrok's browser interstitial page.
+    const headers = new Headers(init?.headers);
+    headers.set("ngrok-skip-browser-warning", "1");
+    res = await fetch(url, { ...init, headers, credentials: "same-origin" });
   } catch {
     throw new ApiError("Backend unreachable — is the API server running on port 8000?", 0);
   }
