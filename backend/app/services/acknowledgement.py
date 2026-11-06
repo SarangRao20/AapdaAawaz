@@ -31,6 +31,9 @@ TEMPLATES = {
     "mixed": "Aapka sandesh receive hua hai. Zaroori jaankari note ki ja rahi hai. "
              "Kripya official emergency services se bhi sampark karein.",
 }
+from .phrases_extra import ACK as _ACK_EXTRA  # noqa: E402
+
+TEMPLATES.update(_ACK_EXTRA)
 FORBIDDEN_PHRASES = ("guarantee", "on its way", "will arrive", "resolved", "पहुंच रही", "येत आहे")
 
 

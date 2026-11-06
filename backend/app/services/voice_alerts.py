@@ -22,7 +22,7 @@ from .telegram_bot import TelegramClient, TelegramError, wav_to_ogg_opus
 
 log = logging.getLogger("aapda.alerts")
 
-LANGUAGES = ("hi", "mr", "mixed", "en")
+LANGUAGES = ("hi", "mr", "mixed", "en", "bn", "gu", "kn", "ml", "pa", "ta", "te")
 
 TEMPLATES: dict[str, dict] = {
     "move_to_high_ground": {
@@ -53,6 +53,11 @@ TEMPLATES: dict[str, dict] = {
         },
     },
 }
+
+from .phrases_extra import ALERTS as _ALERTS_EXTRA  # noqa: E402
+
+for _key, _by_lang in _ALERTS_EXTRA.items():
+    TEMPLATES[_key]["text"].update(_by_lang)
 
 
 class AlertError(Exception):

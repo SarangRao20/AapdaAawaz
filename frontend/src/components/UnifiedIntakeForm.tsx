@@ -2,6 +2,7 @@ import { FileUp, Mic, Type as TypeIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { AudioRecorder } from "./AudioRecorder";
 import { Button, Card, CardHeader, ErrorBanner, FieldLabel, Select, Textarea } from "./ui";
+import { LANGUAGE_LIST } from "../lib/languages";
 
 const ACCEPT = ".wav,.mp3,.m4a,.aac,.ogg,.flac,audio/*";
 
@@ -9,10 +10,11 @@ function LanguageSelect({ value, onChange, id }: { value: string; onChange: (v: 
   return (
     <Select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">Unknown / detect</option>
-      <option value="mr">Marathi (mr-IN)</option>
-      <option value="hi">Hindi (hi-IN)</option>
-      <option value="mixed">Hinglish (sent to Prisma as hi-IN)</option>
-      <option value="en">English (en-IN)</option>
+      {LANGUAGE_LIST.map((l) => (
+        <option key={l.code} value={l.code}>
+          {l.code === "mixed" ? "Hinglish (sent to Prisma as hi-IN)" : `${l.english} (${l.code}${l.code.length === 2 ? "-IN" : ""})`}
+        </option>
+      ))}
     </Select>
   );
 }

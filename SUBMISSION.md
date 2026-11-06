@@ -16,7 +16,7 @@ the same place. People wait, and dispatchers get a pile of unstructured audio.
 
 ## The users
 
-* **People in a disaster,** who may only be able to speak, in Hindi, Marathi, English or Hinglish.
+* **People in a disaster,** who may only be able to speak, in Hindi, Marathi, English, Hinglish, or Bengali, Gujarati, Kannada, Malayalam, Punjabi, Tamil or Telugu.
 * **Dispatchers,** who need to know where, what and how many people, and which report comes first.
 
 ## What it does

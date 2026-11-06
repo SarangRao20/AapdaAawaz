@@ -6,15 +6,11 @@ import { PriorityBadge } from "../components/badges";
 import { Button, Card, ErrorBanner } from "../components/ui";
 import { cn } from "../lib/cn";
 import { label } from "../lib/format";
+import { LANGUAGE_LIST } from "../lib/languages";
 import { LiveCallClient, type CallFacts, type CallLanguage, type CallMetrics, type CallState } from "../lib/liveCall";
 import type { Priority } from "../lib/types";
 
-const LANGUAGES: { code: CallLanguage; name: string; hint: string }[] = [
-  { code: "hi", name: "हिंदी", hint: "Hindi" },
-  { code: "mr", name: "मराठी", hint: "Marathi" },
-  { code: "mixed", name: "Hinglish", hint: "Hindi + English" },
-  { code: "en", name: "English", hint: "English" },
-];
+const LANGUAGES: { code: CallLanguage; name: string; hint: string }[] = LANGUAGE_LIST.map((l) => ({ code: l.code, name: l.name, hint: l.english }));
 
 const STATE_TEXT: Record<CallState, string> = {
   connecting: "Connecting to Gnani…",

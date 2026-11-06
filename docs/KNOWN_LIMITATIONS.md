@@ -2,7 +2,7 @@
 
 ## Providers
 
-* **Awaaz Live** — tested end to end against the live APIs with synthetic speech in all four languages, not
+* **Awaaz Live** — tested end to end against the live APIs with synthetic speech in the four core languages (the other seven were checked as speech-to-text and text-to-speech round trips), not
   with real callers in real conditions.
   * It's half duplex, because Timbre's stream has no cancel message, so a caller can't interrupt the assistant.
   * Prisma's stream only sends text after each phrase, so there are no live captions while someone is talking.
@@ -10,8 +10,18 @@
   * The reply time on screen leaves out that 0.9 s, because Prisma doesn't report when speech ended.
   * The questions are fixed and only about three fields, so it's a form you can talk to, not a free conversation.
     Evon could make it more flexible, but it isn't on Gnani's API (see below).
-  * Fact extraction covers Hindi, Marathi, English and Hinglish. Prisma and Timbre support more languages, but
-    a call in those wouldn't extract anything yet, so they aren't offered.
+  * **Eleven languages.** Hindi, Marathi, English and Hinglish have hand-built fact extraction. Bengali, Gujarati,
+    Kannada, Malayalam, Punjabi, Tamil and Telugu are served by Prisma and Timbre too (round trip checked live with
+    synthetic speech on Nov 6, 2026), but their facts are read from a **machine translation into English** (public
+    Google/MyMemory endpoints, since Gnani has no translation API). That can mistranslate or be rate limited, so every
+    report in these seven languages is flagged for human review with the note "Facts were read from a machine
+    translation: check them against the original", and if every translator fails it says so and reads nothing.
+  * **The fixed wording in those seven languages (prompts, questions, Telegram messages and the three safety
+    alerts) has not been reviewed by native speakers**, like the Hindi and Marathi. It is written in advance, never
+    generated, and every alert points to 112. Have a native speaker read it before real use.
+  * Phone calls through Twilio (`/api/twilio`) still use Twilio's own voices in three languages.
+  * Prisma's `keyterms` (village and hazard words) are sent only for the four core languages, because they pulled
+    Gujarati, Kannada and Punjabi transcripts towards Hindi.
 * **Language detection** — Prisma v3's `indic-auto` labelled Hindi speech as English on a sample clip, so the
   caller picks a language. Prisma's `detected_language_code` comes from the script of the transcript.
 * **Voice alerts and call wording** — the Hindi and Marathi text hasn't been checked by native speakers. Alerts

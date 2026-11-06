@@ -3,7 +3,7 @@
 import { BASE } from "./api";
 
 export type CallState = "connecting" | "listening" | "thinking" | "speaking" | "ended";
-export type CallLanguage = "hi" | "mr" | "en" | "mixed";
+export type CallLanguage = "hi" | "mr" | "en" | "mixed" | "bn" | "gu" | "kn" | "ml" | "pa" | "ta" | "te";
 
 export interface CallFacts {
   place: string | null;

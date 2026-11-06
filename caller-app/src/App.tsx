@@ -4,9 +4,12 @@ import type { ReportStatus } from "./api";
 import LiveCallScreen from "./LiveCall";
 
 type Screen = "home" | "processing" | "done" | "followup" | "live";
-type Lang = "hi" | "mr" | "en";
+type Lang = "hi" | "mr" | "en" | "bn" | "gu" | "kn" | "ml" | "pa" | "ta" | "te";
 
-const LANG_LABELS: Record<Lang, string> = { hi: "हिंदी", mr: "मराठी", en: "English" };
+const LANG_LABELS: Record<Lang, string> = {
+  hi: "हिंदी", mr: "मराठी", en: "English", bn: "বাংলা", gu: "ગુજરાતી",
+  kn: "ಕನ್ನಡ", ml: "മലയാളം", pa: "ਪੰਜਾਬੀ", ta: "தமிழ்", te: "తెలుగు",
+};
 const PRIORITY_COLOR: Record<string, string> = {
   critical: "#ef4444", high: "#f97316", medium: "#eab308", low: "#22c55e",
 };
@@ -358,12 +361,12 @@ export default function App() {
 
         {/* lang selector */}
         <div className="px-6 mb-6">
-          <div className="flex rounded-2xl overflow-hidden border border-white/8 bg-[#111]">
+          <div className="grid grid-cols-3 rounded-2xl overflow-hidden border border-white/8 bg-[#111]">
             {(Object.entries(LANG_LABELS) as [Lang, string][]).map(([k, v]) => (
               <button
                 key={k}
                 onClick={() => setLang(k)}
-                className={`flex-1 py-3 text-sm font-semibold transition-all ${lang === k ? "bg-[#f97316] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]" : "text-[#525252] hover:text-[#a3a3a3]"}`}
+                className={`py-3 text-sm font-semibold transition-all ${lang === k ? "bg-[#f97316] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]" : "text-[#525252] hover:text-[#a3a3a3]"}`}
               >
                 {v}
               </button>

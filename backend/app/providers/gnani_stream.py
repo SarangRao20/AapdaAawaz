@@ -16,6 +16,7 @@ from collections.abc import AsyncIterator
 import websockets
 
 from ..config import TIMBRE_LANGUAGE_CODES, settings
+from ..services.languages import EXTRA
 from ..services.stt_hints import disaster_keyterms
 from .base import ProviderError, ProviderUnavailable
 from .prisma import PrismaSTT
@@ -57,7 +58,8 @@ class PrismaStream:
         if rest.is_v3:
             self._headers["model"] = self.model
             # Headers must be ASCII. Gnani's docs recommend a JSON array with \u escapes for Indian scripts.
-            self._headers["keyterms"] = json.dumps(list(disaster_keyterms()))
+            if language not in EXTRA:  # see PrismaSTT.request_fields
+                self._headers["keyterms"] = json.dumps(list(disaster_keyterms()))
         self._ws = None
         self._pending = b""
 

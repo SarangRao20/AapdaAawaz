@@ -1,7 +1,8 @@
+import type { CallLanguageCode } from "./languages";
 /** The browser side of a live call: microphone up to Prisma, Timbre's voice back to the speaker. */
 
 export type CallState = "connecting" | "listening" | "thinking" | "speaking" | "ended";
-export type CallLanguage = "hi" | "mr" | "en" | "mixed";
+export type CallLanguage = CallLanguageCode;
 
 export interface CallFacts {
   place: string | null;

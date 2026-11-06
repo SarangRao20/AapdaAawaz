@@ -12,6 +12,7 @@ import { DedupPill, StatusPill } from "./LiveFeed";
 import { PriorityExplain } from "./PriorityExplain";
 import { Badge, Button, ErrorBanner, Input, Section, Select, Textarea } from "./ui";
 import { WaveformPlayer } from "./WaveformPlayer";
+import { LANGUAGE_LIST } from "../lib/languages";
 
 const PIPELINE_STAGES = [
   { key: "transcription", label: "STT", desc: "Speech-to-text" },
@@ -216,10 +217,11 @@ export function ReportDetailView({ report, onChanged }: { report: ReportDetail; 
               <Input className="w-40" value={reviewer} onChange={(e) => setReviewer(e.target.value)} aria-label="Reviewer name" />
               <Select className="w-44" value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Language">
                 <option value="">Detect language</option>
-                <option value="mr">Marathi</option>
-                <option value="hi">Hindi</option>
-                <option value="mixed">Hinglish / mixed</option>
-                <option value="en">English</option>
+                {LANGUAGE_LIST.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.english === "Hindi + English" ? "Hinglish / mixed" : l.english}
+                  </option>
+                ))}
               </Select>
               <Button
                 variant="primary"

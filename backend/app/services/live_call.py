@@ -62,6 +62,13 @@ HAZARD_WORDS: dict[str, dict[str, str]] = {
     "fire": {"hi": "आग", "mr": "आग", "en": "fire", "mixed": "aag"},
 }
 
+from .phrases_extra import HAZARD_WORDS as _HAZ_EXTRA, SPOKEN as _SPOKEN_EXTRA  # noqa: E402
+
+for _key, _by_lang in _SPOKEN_EXTRA.items():
+    SPOKEN[_key].update(_by_lang)
+for _key, _by_lang in _HAZ_EXTRA.items():
+    HAZARD_WORDS[_key].update(_by_lang)
+
 
 def spoken(key: str, language: str) -> str:
     return SPOKEN[key][ack_language(language)]

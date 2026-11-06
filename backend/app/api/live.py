@@ -24,6 +24,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..auth import WS_TICKET_SECONDS, create_ws_ticket, is_authenticated, valid_ws_ticket
 from ..config import settings
+from ..services.languages import ALL as ALL_LANGUAGES
 from ..providers.base import ProviderError, ProviderUnavailable
 from ..providers.gnani_stream import SAMPLE_RATE, PrismaStream, speak_stream
 from ..services.live_call import CallBrain, Turn, calls, save_call_audio
@@ -32,7 +33,7 @@ from ..services.live_guard import LiveGuard
 log = logging.getLogger("aapda.live")
 router = APIRouter(prefix="/api/live", tags=["live call"])
 
-LANGUAGES = {"hi", "mr", "en", "mixed"}
+LANGUAGES = set(ALL_LANGUAGES)
 SETTLE_S = 0.3  # on top of the silence Prisma already waits for, in case the caller is still going
 SILENCE_S = 12.0  # ask again after this much quiet
 MAX_CALL_S = 300.0  # a call is capped so a forgotten tab can't keep spending credits
@@ -342,7 +343,7 @@ async def live_call(ws: WebSocket):
             return
         language = first.get("language")
         if first.get("type") != "start" or language not in LANGUAGES:
-            await ws.send_json({"type": "error", "message": "Choose hi, mr, en or mixed."})
+            await ws.send_json({"type": "error", "message": "Choose one of: " + ", ".join(ALL_LANGUAGES) + "."})
             await ws.close(code=1008)
             return
         await LiveSession(ws, language).run()

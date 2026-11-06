@@ -167,6 +167,7 @@ def load_settings() -> Settings:
             "hi": _env("TIMBRE_VOICE_HI", "Shivani"),
             "en": _env("TIMBRE_VOICE_EN", "Shivani"),
             "mixed": _env("TIMBRE_VOICE_MIXED", "Shivani"),
+            **{c: _env(f"TIMBRE_VOICE_{c.upper()}", "Shivani") for c in ("bn", "gu", "kn", "ml", "pa", "ta", "te")},
         },
         timbre_timeout_s=_env_float("TIMBRE_TIMEOUT_S", 30.0),
         live_timbre_model=_env("LIVE_TIMBRE_MODEL", "timbre-v3.0"),
@@ -204,7 +205,6 @@ def load_settings() -> Settings:
 
 # Internal language -> Gnani BCP-47 codes (docs.gnani.ai/api/STT/speech-to-text, /api/TTS/tts-inference).
 # Prisma has no Hinglish code; mixed Hindi-English speech is sent as hi-IN.
-PRISMA_LANGUAGE_CODES = {"mr": "mr-IN", "hi": "hi-IN", "en": "en-IN", "mixed": "hi-IN"}
-TIMBRE_LANGUAGE_CODES = {"mr": "mr-IN", "hi": "hi-IN", "en": "en-IN", "mixed": "hi-en"}
+from .services.languages import PRISMA_CODES as PRISMA_LANGUAGE_CODES, TIMBRE_CODES as TIMBRE_LANGUAGE_CODES  # noqa: E402,F401
 
 settings = load_settings()

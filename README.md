@@ -4,7 +4,7 @@
 > contact emergency services or guarantee any outcome. Every action stays with a human dispatcher.
 > All reports, people and places in this repository are fictional.
 
-Aapda Awaaz turns chaotic emergency voice reports (Marathi, Hindi, Hinglish, English) into a
+Aapda Awaaz turns chaotic emergency voice reports (Hindi, Marathi, English, Hinglish, and Bengali, Gujarati, Kannada, Malayalam, Punjabi, Tamil, Telugu) into a
 prioritised, deduplicated, uncertainty-aware incident picture:
 
 ```
@@ -24,7 +24,7 @@ as real model output.
 |---|---|
 | Ingestion: audio upload (WAV/MP3/M4A/AAC/OGG/FLAC), browser recording (→16 kHz WAV), typed transcript, synthetic demo injection | ✅ |
 | Background processing worker with per-stage job records (provider, mode, timing, errors) | ✅ |
-| **Awaaz Live:** a realtime voice conversation over Gnani Prisma and Timbre streaming, in Hindi, Marathi, English and Hinglish | ✅ code + tests + **live API verified (Nov 3, 2026)** with synthetic speech |
+| **Awaaz Live:** a realtime voice conversation over Gnani Prisma and Timbre streaming, in 11 languages (Hindi, Marathi, English, Hinglish, Bengali, Gujarati, Kannada, Malayalam, Punjabi, Tamil, Telugu; the last seven are read through a machine translation and always flagged for human review) | ✅ code + tests + **live API verified (Nov 3, 2026)** with synthetic speech |
 | Gnani **Prisma v3.0** with village-name hints, over REST and streaming | ✅ code + tests + **live API verified (Nov 3, 2026)**, results in [docs/STT_BENCHMARK.md](docs/STT_BENCHMARK.md) |
 | Gnani **Timbre v3.0** spoken replies, voice notes and multilingual voice alerts | ✅ code + tests + **live API verified (Nov 3, 2026)** |
 | Gnani **Evon** extraction | ⚠️ Evon v3.3 is **Hugging Face open weights only** (not API). Complete OpenAI-compatible adapter implemented for self-hosted deployment, but contest submission uses rule-based extraction |

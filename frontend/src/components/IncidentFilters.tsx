@@ -2,6 +2,7 @@ import { PRIORITY_COLOR, PRIORITY_ORDER, langLabel } from "../lib/format";
 import { cn } from "../lib/cn";
 import type { Incident, Priority } from "../lib/types";
 import { Select } from "./ui";
+import { ALL_LANGUAGES } from "../lib/languages";
 
 export interface Filters {
   priorities: Priority[];
@@ -69,7 +70,7 @@ export function IncidentFilters({ value, onChange, counts }: { value: Filters; o
       </Select>
       <Select aria-label="Language" className="h-7 w-auto text-xs" value={value.language} onChange={(e) => onChange({ ...value, language: e.target.value })}>
         <option value="">Any language</option>
-        {["mr", "hi", "en", "mixed"].map((l) => (
+        {ALL_LANGUAGES.map((l) => (
           <option key={l} value={l}>
             {langLabel(l)}
           </option>

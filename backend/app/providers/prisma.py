@@ -26,6 +26,7 @@ from pathlib import Path
 import httpx
 
 from ..config import PRISMA_LANGUAGE_CODES, settings
+from ..services.languages import EXTRA
 from ..services.stt_hints import disaster_keyterms
 from .base import ProviderError, ProviderUnavailable, TranscriptionResult
 
@@ -78,7 +79,9 @@ class PrismaSTT:
         fields = {"language_code": self.request_language(language), "format": self.fmt}
         if self.is_v3:
             fields["model"] = self.model
-            if self.keyterms:
+            # The keyterms are Hindi/Marathi/English place and hazard words: for other languages they pull
+            # the transcript towards Hindi (seen with Gujarati, Kannada and Punjabi), so they are left out.
+            if self.keyterms and language not in EXTRA:
                 fields["keyterms"] = ",".join(self.keyterms)
         return fields
 

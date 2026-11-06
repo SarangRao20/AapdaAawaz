@@ -9,7 +9,7 @@ export type LocationStatus =
   | "caller_stated_unmapped"
   | "ambiguous"
   | "unknown";
-export type Language = "mr" | "hi" | "en" | "mixed" | "unknown";
+export type Language = "mr" | "hi" | "en" | "mixed" | "bn" | "gu" | "kn" | "ml" | "pa" | "ta" | "te" | "unknown";
 
 export interface Reason {
   code: string;

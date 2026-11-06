@@ -117,6 +117,6 @@ def test_ack_language_known():
 
 
 def test_ack_language_unknown_falls_back_to_mixed():
-    assert ack_language("ta") == "mixed"
-    assert ack_language(None) == "mixed"
     assert ack_language("xx") == "mixed"
+    assert ack_language(None) == "mixed"
+    assert ack_language("ta") == "ta"  # Tamil is a supported language now

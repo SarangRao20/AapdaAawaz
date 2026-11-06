@@ -54,6 +54,14 @@ _FALLBACK_QUESTIONS: dict[str, dict[str, str]] = {
 }
 
 
+from .languages import ALL as _ALL, LABELS as _LABELS  # noqa: E402
+from .phrases_extra import QUESTIONS as _Q_EXTRA  # noqa: E402
+
+for _key, _by_lang in _Q_EXTRA.items():
+    _FALLBACK_QUESTIONS[_key].update(_by_lang)
+_LANG_NAMES.update({c: _LABELS[c] for c in ("bn", "gu", "kn", "ml", "pa", "ta", "te")})
+
+
 def missing_fields(ext: dict) -> list[str]:
     """Return list of missing critical field keys for a given extraction dict."""
     missing: list[str] = []
@@ -97,7 +105,7 @@ def generate_questions(ext: dict, language: str) -> tuple[list[str], str, str]:
             log.warning("followup: evon failed (%s), using static templates", exc)
 
     # Fallback: pick static templates for the first 2 missing fields
-    lang = language if language in ("hi", "mr", "en", "mixed") else "hi"
+    lang = language if language in _ALL else "hi"
     questions = []
     for field in missing[:2]:
         q = _FALLBACK_QUESTIONS[field].get(lang) or _FALLBACK_QUESTIONS[field]["hi"]

@@ -20,6 +20,7 @@ from ..config import settings
 from ..providers.base import ProviderError, ProviderUnavailable
 from ..providers.evon import EvonExtractor
 from ..providers.registry import get_stt
+from .languages import ALL as ALL_LANGUAGES
 from . import aggregation, gate, matching
 from . import priority as prio
 from .acknowledgement import create_text_ack
@@ -362,7 +363,7 @@ def process_report(db: Session, report_id: str) -> models.Report | None:
 
         # 5. agentic follow-up — detect missing fields, generate targeted questions via Evon
         _raw_lang = ext.get("language") or report.language_hint or "hi"
-        lang = _raw_lang if _raw_lang in ("hi", "mr", "en", "mixed") else "hi"
+        lang = _raw_lang if _raw_lang in ALL_LANGUAGES else "hi"
         if needs_followup(ext):
             with stage(db, report, "follow_up") as fu_job:
                 missing = missing_fields(ext)

@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 DisasterType = Literal["flood", "earthquake", "landslide", "fire", "other", "unknown"]
 Urgency = Literal["critical", "high", "medium", "low", "unknown"]
-Language = Literal["mr", "hi", "en", "mixed", "unknown"]
+Language = Literal["mr", "hi", "en", "mixed", "bn", "gu", "kn", "ml", "pa", "ta", "te", "unknown"]
 LocationSource = Literal["caller_stated", "verified_reference", "simulated", "unknown"]
 TranscriptQuality = Literal["ok", "low", "unknown"]
 PriorityLabel = Literal["critical", "high", "medium", "low"]

@@ -3,16 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { api, fetchAudio } from "../lib/api";
 import { cn } from "../lib/cn";
 import { label } from "../lib/format";
+import { LANGUAGE_LIST, htmlLang } from "../lib/languages";
 import { getReviewer } from "../lib/reviewer";
 import type { VoiceAlertOptions } from "../lib/types";
 import { Button, Card, CardHeader, ErrorBanner } from "./ui";
 
-const LANGUAGES = [
-  { code: "hi", name: "हिंदी" },
-  { code: "mr", name: "मराठी" },
-  { code: "mixed", name: "Hinglish" },
-  { code: "en", name: "English" },
-];
+const LANGUAGES = LANGUAGE_LIST.map((l) => ({ code: l.code as string, name: l.name }));
 
 /** A dispatcher hears a fixed safety message in each language, then sends it to the people who reported this. */
 export function VoiceAlerts({ incidentId }: { incidentId: string }) {
@@ -156,7 +152,7 @@ export function VoiceAlerts({ incidentId }: { incidentId: string }) {
         </div>
 
         {chosen && (
-          <p className="rounded-md border border-line bg-surface-2 px-3 py-2 text-sm leading-relaxed text-ink" lang={language === "mixed" ? "hi" : language}>
+          <p className="rounded-md border border-line bg-surface-2 px-3 py-2 text-sm leading-relaxed text-ink" lang={htmlLang(language)}>
             {chosen.text[language]}
           </p>
         )}

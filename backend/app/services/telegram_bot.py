@@ -28,6 +28,8 @@ from ..providers.registry import get_stt, get_tts
 from .acknowledgement import TEMPLATES, ack_language
 from .extraction import extract
 from .followup import _FALLBACK_QUESTIONS, missing_fields
+from .languages import ALL as ALL_LANGUAGES, EXTRA, NATIVE
+from .phrases_extra import PEOPLE_SUFFIX, PLACE_SUFFIX, TELEGRAM as TELEGRAM_EXTRA
 from .pipeline import as_utc, audit, mark_failed, new_report_id, process_report, utcnow
 from .settings_store import get_config
 from .storage import MAX_SECONDS, UploadError, store_audio
@@ -38,7 +40,9 @@ log = logging.getLogger("aapda.telegram")
 OFFSET_KEY = "telegram_offset"
 ADD_DETAILS_WINDOW = timedelta(minutes=60)  # later messages start a new report
 POLL_TIMEOUT_S = 10  # also how often reminders are checked
-LANG_BUTTONS = {"हिंदी": "hi", "मराठी": "mr", "English": "en", "Hinglish": "mixed"}
+LANG_BUTTONS = {NATIVE[c]: c for c in ALL_LANGUAGES}
+# Telegram reports the sender's app language; use it when it is one we speak (not Hinglish, which nobody sets).
+SENDER_LANGUAGES = tuple(c for c in ALL_LANGUAGES if c != "mixed")
 
 TEXT: dict[str, dict[str, str]] = {
     "welcome": {
@@ -113,13 +117,17 @@ TEXT: dict[str, dict[str, str]] = {
     "summary_gps": {"hi": "आपकी भेजी लोकेशन", "mr": "तुम्ही पाठवलेले लोकेशन", "en": "your shared location", "mixed": "aapki bheji location"},
     "summary_id": {"hi": "रिपोर्ट नंबर", "mr": "अहवाल क्रमांक", "en": "Report ID", "mixed": "Report ID"},
 }
+for _key, _by_lang in TELEGRAM_EXTRA.items():  # the seven extra languages, before _DONT_KNOW reads them
+    TEXT[_key].update(_by_lang)
+
 _DONT_KNOW = {normalize(w) for w in (
     *TEXT["dont_know"].values(), "dont know", "don't know", "do not know", "not sure", "no idea", "skip", "unknown",
     "pata nahi", "pata nahin", "nahi pata", "मालूम नहीं", "पता नहीं", "नहीं पता", "माहित नाही", "माहीत नाही",
 )}
 # Added to a bare answer ("25", "Kesarwadi") so the extractor can read it as a count or a place.
-_PEOPLE_SUFFIX = {"hi": "लोग", "mr": "लोक", "en": "people", "mixed": "log"}
-_PLACE_SUFFIX = {"hi": "गांव", "mr": "गाव", "en": "gaon", "mixed": "gaon"}
+_PEOPLE_SUFFIX = {"hi": "लोग", "mr": "लोक", "en": "people", "mixed": "log", **{c: PEOPLE_SUFFIX for c in EXTRA}}
+_PLACE_SUFFIX = {"hi": "गांव", "mr": "गाव", "en": "gaon", "mixed": "gaon", **{c: PLACE_SUFFIX for c in EXTRA}}
+
 
 
 class TelegramError(Exception):
@@ -290,7 +298,7 @@ class TelegramBot:
                  and utcnow() - as_utc(conv.updated_at) > ADD_DETAILS_WINDOW)
         if conv is None or stale:
             language = conv.language if conv and conv.language_locked else (
-                sender_language if sender_language in ("hi", "mr", "en") else "hi")
+                sender_language if sender_language in SENDER_LANGUAGES else "hi")
             conv = self._start_new(db, chat_id, language, bool(conv and conv.language_locked))
         return conv
 
@@ -503,10 +511,11 @@ class TelegramBot:
         if text in ("/start", "/new") or text.startswith("/start "):
             previous = self._current(db, chat_id)
             locked = bool(previous and previous.language_locked)
-            language = previous.language if locked else (sender_language if sender_language in ("hi", "mr", "en") else "hi")
+            language = previous.language if locked else (sender_language if sender_language in SENDER_LANGUAGES else "hi")
             conv = self._start_new(db, chat_id, language, locked)
-            keyboard = {"keyboard": [[{"text": b} for b in LANG_BUTTONS],
-                                     [{"text": _text("share_location", conv), "request_location": True}]],
+            buttons = [{"text": b} for b in LANG_BUTTONS]
+            keyboard = {"keyboard": [buttons[i:i + 4] for i in range(0, len(buttons), 4)]
+                                    + [[{"text": _text("share_location", conv), "request_location": True}]],
                         "resize_keyboard": True}
             self.client.send_message(chat_id, _text("welcome", conv), keyboard)
             db.commit()

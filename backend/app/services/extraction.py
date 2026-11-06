@@ -23,6 +23,8 @@ from ..schemas import (
     VulnerablePeople,
 )
 from . import lexicon as lx
+from .languages import LABELS as LANGUAGE_LABELS, is_extra
+from .translate import to_english
 from .gazetteer import load_gazetteer
 from .text_utils import Match, Token, compile_keyword, find_any, is_devanagari, is_negated, normalize, tokenize
 
@@ -616,6 +618,23 @@ def _summary(r: ExtractionResult) -> str:
 
 
 def extract(transcript: str, language_hint: str | None = None) -> ExtractionResult:
+    """Facts from a transcript. Bengali, Gujarati, Kannada, Malayalam, Punjabi, Tamil and Telugu are read from a
+    machine translation into English, and that always goes to a person to check against the original."""
+    if is_extra(language_hint):
+        translated = to_english(transcript, language_hint)
+        result = _extract(translated or transcript, "en" if translated else None)
+        note = (f"Facts were read from a machine translation of this {LANGUAGE_LABELS[language_hint]} transcript: check them against "
+                "the original." if translated else
+                f"This {LANGUAGE_LABELS[language_hint]} transcript could not be translated, so no facts were read from it: "
+                "a person needs to read it.")
+        result.uncertainties.insert(0, note)
+        result.requires_human_review = True
+        result.language = language_hint
+        return ExtractionResult.model_validate(result.model_dump())
+    return _extract(transcript, language_hint)
+
+
+def _extract(transcript: str, language_hint: str | None = None) -> ExtractionResult:
     tokens = tokenize(transcript)
     ev: list[Evidence] = []
     unc: list[str] = []
