@@ -1,5 +1,7 @@
 # Aapda Awaaz — Voice Intelligence for Disaster Response
 
+**One-page pitch: [PITCH.md](PITCH.md)**
+
 > **Prototype · synthetic data only · decision support.** Aapda Awaaz does not dispatch responders,
 > contact emergency services or guarantee any outcome. Every action stays with a human dispatcher.
 > All reports, people and places in this repository are fictional.
@@ -70,8 +72,7 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5173 and use the **Demo** buttons on the Command Center (see
-[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)).
+Open http://127.0.0.1:5173 and use the **Demo** buttons on the Command Center.
 
 ### Configuration
 
@@ -250,11 +251,11 @@ Safety: [docs/SAFETY.md](docs/SAFETY.md) · Evaluation: [docs/EVALUATION.md](doc
 ## Repository layout
 
 ```
-.env.example  .gitignore  setup.ps1  run-backend.ps1  run-frontend.ps1  README.md
+.env.example  .gitignore  setup.ps1  run-backend.ps1  run-frontend.ps1  README.md  PITCH.md
 backend/  app/ (api, providers, services, config.py, db.py, models.py, schemas.py, main.py)
           data/ (simulated_gazetteer.json, synthetic_reports.json, holdout_reports.json, audio/*.wav)
           scripts/ (manage.py, make_audio_fixtures.ps1)  tests/  requirements.txt
 frontend/ src/ (pages, components, lib)  package.json  vite.config.ts  tailwind.config.js
-docs/     ARCHITECTURE.md API.md SAFETY.md EVALUATION.md DEMO_SCRIPT.md KNOWN_LIMITATIONS.md
+docs/     ARCHITECTURE.md API.md SAFETY.md EVALUATION.md KNOWN_LIMITATIONS.md
 ```
 Aapda Aawaz
