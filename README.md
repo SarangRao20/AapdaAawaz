@@ -1,261 +1,281 @@
-# Aapda Awaaz — Voice Intelligence for Disaster Response
+# Aapda Awaaz
 
-**One-page pitch: [PITCH.md](PITCH.md)**
+**When the phone lines are full, a voice still answers.**
 
-> **Prototype · synthetic data only · decision support.** Aapda Awaaz does not dispatch responders,
-> contact emergency services or guarantee any outcome. Every action stays with a human dispatcher.
-> All reports, people and places in this repository are fictional.
+A multilingual voice assistant for disaster response, built on Gnani AI. People report an emergency in their own
+language, the system sorts the chaos into clear incidents, and a human dispatcher always makes the call.
 
-Aapda Awaaz turns chaotic emergency voice reports (Hindi, Marathi, English, Hinglish, and Bengali, Gujarati, Kannada, Malayalam, Punjabi, Tamil, Telugu) into a
-prioritised, deduplicated, uncertainty-aware incident picture:
+[![CI/CD](https://github.com/SarangRao20/AapdaAawaz/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/SarangRao20/AapdaAawaz/actions/workflows/ci-cd.yml)
+![Languages](https://img.shields.io/badge/languages-10%20Indian%20%2B%20Hinglish-f97316)
+![Built on](https://img.shields.io/badge/built%20on-Gnani%20Prisma%20%2B%20Timbre-222222)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
+
+**[Live site](https://aapdaawaaz.duckdns.org)** | **[Telegram bot](https://t.me/aapda_aawaz_bot)** | **[Android app](https://github.com/SarangRao20/AapdaAawaz/releases/latest)** | **[One-page pitch](PITCH.md)**
+
+![The Aapda Awaaz landing page](docs/images/landing.jpg)
+
+> **Prototype, synthetic data only, decision support.** Aapda Awaaz does not dispatch anyone, contact emergency
+> services or promise help. Every action stays with a person. All reports, people and places in this repository are
+> fictional. It is not a replacement for **112**.
+
+## Contents
+
+1. [The problem](#the-problem)
+2. [What it does](#what-it-does)
+3. [See it in action](#see-it-in-action)
+4. [Architecture](#architecture)
+5. [Built on Gnani](#built-on-gnani)
+6. [Project structure](#project-structure)
+7. [Run it yourself](#run-it-yourself)
+8. [Features in detail](#features-in-detail)
+9. [How well does it work?](#how-well-does-it-work)
+10. [Safety and limitations](#safety-and-limitations)
+11. [Deployment](#deployment)
+12. [Tests](#tests) and [Troubleshooting](#troubleshooting)
+13. [Team and license](#team-and-license)
+
+## The problem
+
+In a flood, emergency lines fill up. Callers are frightened, switch between languages, and many of them describe
+the same school roof. Dispatchers end up with a pile of unstructured audio and have to decide, by ear and under
+pressure, who gets help first.
+
+## What it does
+
+Aapda Awaaz turns those calls into a ranked, de-duplicated picture of what is happening and where.
+
+- **Report from anywhere.** An Android app, a Telegram bot, or a live voice call in the browser.
+- **10 Indian languages, plus Hinglish.** The caller speaks and is answered in the same language.
+- **It asks only what is missing.** Where? How many people? Anyone vulnerable? One question at a time, by voice.
+- **Duplicates collapse.** Six reports about one event become one incident, with the evidence shown.
+- **A priority you can argue with.** Every score lists its reasons, and severity is kept separate from how sure the
+  system is about the information.
+- **Honest about uncertainty.** A shaky transcript or a guessed location is flagged for review and never shown as fact.
+- **A person decides.** Dispatchers verify, correct, merge, split and send alerts, and every action is logged.
 
 ```
-voice note → speech-to-text → structured extraction → field-level confidence gate
-           → duplicate detection / clustering → explainable priority → map + queue → human review
+voice or text  ->  speech to text  ->  facts pulled out  ->  confidence gate
+              ->  duplicates merged  ->  explainable priority  ->  dispatcher decides  ->  spoken alert
 ```
 
-It runs fully offline on a laptop. Without a Gnani API key it uses a **clearly labelled mock**
-speech-to-text that only recognises the bundled synthetic audio, and it never presents mock output
-as real model output.
+## See it in action
 
----
-
-## What works today
-
-| Area | Status |
+| | |
 |---|---|
-| Ingestion: audio upload (WAV/MP3/M4A/AAC/OGG/FLAC), browser recording (→16 kHz WAV), typed transcript, synthetic demo injection | ✅ |
-| Background processing worker with per-stage job records (provider, mode, timing, errors) | ✅ |
-| **Awaaz Live:** a realtime voice conversation over Gnani Prisma and Timbre streaming, in 11 languages (Hindi, Marathi, English, Hinglish, Bengali, Gujarati, Kannada, Malayalam, Punjabi, Tamil, Telugu; the last seven are read through a machine translation and always flagged for human review) | ✅ code + tests + **live API verified (Nov 3, 2026)** with synthetic speech |
-| Gnani **Prisma v3.0** with village-name hints, over REST and streaming | ✅ code + tests + **live API verified (Nov 3, 2026)**, results in [docs/STT_BENCHMARK.md](docs/STT_BENCHMARK.md) |
-| Gnani **Timbre v3.0** spoken replies, voice notes and multilingual voice alerts | ✅ code + tests + **live API verified (Nov 3, 2026)** |
-| Gnani **Evon** extraction | ⚠️ Evon v3.3 is **Hugging Face open weights only** (not API). Complete OpenAI-compatible adapter implemented for self-hosted deployment, but contest submission uses rule-based extraction |
-| Rule-based extraction (location vs simulated gazetteer, people, vulnerable groups, needs, dangers, urgency, language, transcript quality) | ✅ |
-| Field-level confidence gate + human-review reasons | ✅ |
-| Deterministic duplicate detection (likely / possible / distinct) with evidence | ✅ |
-| Explainable priority score (severity separate from information confidence) | ✅ |
-| Human review: verify/correct location, people count, priority, hazard; confirm/reject duplicates; merge; split; notes; full audit log | ✅ |
-| Command Center: live KPIs, Leaflet map with clustering + offline fallback, filters, queue, live feed | ✅ |
-| Evaluation Lab: development + hold-out splits, confusion matrices, P/R, CSV export | ✅ |
-| Tests: backend (pytest), frontend (vitest), production build | ✅ |
+| ![Caller app](docs/images/caller-app.jpg) | ![Awaaz Live voice call](docs/images/awaaz-live.jpg) |
+| **Caller app.** Tap the mic and speak, in your own language. | **Awaaz Live.** A realtime voice call that asks only for what is still missing. |
+| ![Command Center map](docs/images/command-center.jpg) | ![Incident page](docs/images/incident.jpg) |
+| **Command Center.** Red pins first, dashed rings are unverified. | **Incident page.** Facts, linked reports, and a voice alert in each person's language. |
+| ![Telegram bot](docs/images/telegram.jpg) | ![Situation Room globe](docs/images/globe.jpg) |
+| **Telegram bot.** Voice note, text or location. | **Situation Room.** A new report arrives and the globe turns to it. |
 
-See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) before relying on anything.
+## Architecture
 
----
+![Aapda Awaaz system architecture](docs/images/architecture.png)
 
-## Quick start (Windows)
+| Layer | What it does | Where it lives |
+|---|---|---|
+| Report channels | Android app, Telegram bot, and a live voice call on the website | `caller-app/`, `backend/app/services/telegram_bot.py`, `frontend/` |
+| AI pipeline | Gnani Prisma (speech to text), rule-based fact extraction, Gnani Timbre (spoken replies) | `backend/app/providers/`, `backend/app/services/` |
+| Incident management | De-duplication, merging, explainable priority score, safety alerts | `matching.py`, `priority.py`, `aggregation.py`, `voice_alerts.py` |
+| Dispatcher dashboard | Map, queue, review, merge and split, audit trail | `frontend/` |
+| Core services | SQLite, action logs, translation for the newer languages, auth, background worker | `models.py`, `worker.py`, `translate.py` |
 
-Prerequisites: **Python 3.11+** (verified on 3.13) and **Node.js 18+** (verified on 22.x).
-If your system Node is older, unpack a portable Node into `.tools\node\` — the scripts use it automatically.
+Extraction, gating, priority and matching are pure, deterministic functions. That is what makes every score
+explainable and every test repeatable. More detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and
+[docs/API.md](docs/API.md).
+
+## Built on Gnani
+
+| Gnani model | What we use it for |
+|---|---|
+| **Prisma v3.0** (speech to text) | Streams the caller's voice live, over REST and WebSocket. For Hindi, Marathi and English it also gets village names as hints, so "Nandwadi" is heard as Nandwadi. |
+| **Timbre v3.0** (text to speech) | Speaks the questions, read-backs and safety alerts in the caller's language. |
+| **Evon** (reasoning model) | An OpenAI-compatible adapter for self-hosting the open weights. The submission itself uses rule-based extraction. |
+
+### Languages
+
+| Language | Code | Fact extraction |
+|---|---|---|
+| Hindi, Marathi, English, Hinglish | `hi` `mr` `en` `mixed` | Hand-built rules |
+| Bengali, Gujarati, Kannada, Malayalam, Punjabi, Tamil, Telugu | `bn` `gu` `kn` `ml` `pa` `ta` `te` | Read from a machine translation, **always flagged for human review** |
+
+Prompts, questions and the three safety alerts are fixed text, written in advance for every language. They are never
+machine-translated, because a wrong safety instruction is worse than none. The wording for the seven newer languages
+has not been checked by native speakers yet, so please have one read it before real use.
+
+## Project structure
+
+```
+AapdaAawaz/
+├── backend/                 FastAPI service
+│   ├── app/
+│   │   ├── api/             routes: reports, incidents, live call, auth, system, twilio
+│   │   ├── providers/       prisma, timbre, evon, streaming client, mock speech
+│   │   ├── services/        extraction, gate, priority, matching, pipeline, live call,
+│   │   │                    telegram bot, voice alerts, languages, translation, worker
+│   │   ├── models.py        SQLAlchemy tables
+│   │   └── main.py
+│   ├── data/                simulated gazetteer, synthetic and hold-out reports, sample audio
+│   ├── scripts/             manage.py (db tools), benchmark_stt.py
+│   └── tests/               257 pytest tests
+├── frontend/                React + TypeScript + Vite dashboard and live-call page
+│   └── src/ (pages, components, lib)
+├── caller-app/              React + Capacitor app for the public (web and Android)
+├── mcp_server/              MCP tools so any AI agent can use the pipeline
+├── deploy/                  Caddyfile and one-time VM setup
+├── docs/                    architecture, API, safety, evaluation, limitations, images
+├── .github/                 CI/CD workflow and the remote deploy script
+├── docker-compose.yml       optional: run the API in a container
+├── .env.example             every setting, with comments
+├── PITCH.md                 the one-page pitch
+└── run.sh, setup.ps1,       local run helpers (Linux/macOS and Windows)
+    run-backend.ps1, run-frontend.ps1
+```
+
+## Run it yourself
+
+You need **Python 3.11+** and **Node.js 18+**. Without a Gnani key it still runs, using a clearly labelled mock
+speech-to-text that only recognises the bundled sample audio.
+
+**Linux or macOS**
+
+```bash
+cd backend && python -m venv venv && venv/bin/pip install -r requirements.txt && cd ..
+cp .env.example .env        # add GNANI_API_KEY for real speech
+./run.sh                    # API on :8000, dashboard on :5173
+```
+
+**Windows**
 
 ```powershell
-# one-time setup (venv, pip install, npm install, create .env, init database)
 powershell -ExecutionPolicy Bypass -File setup.ps1
-
-# terminal 1 — API on http://127.0.0.1:8000  (Swagger UI: http://127.0.0.1:8000/docs)
-powershell -ExecutionPolicy Bypass -File run-backend.ps1
-
-# terminal 2 — UI on http://127.0.0.1:5173
-powershell -ExecutionPolicy Bypass -File run-frontend.ps1
+powershell -ExecutionPolicy Bypass -File run-backend.ps1     # terminal 1
+powershell -ExecutionPolicy Bypass -File run-frontend.ps1    # terminal 2
 ```
 
-Manual equivalent:
-
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\python -m pip install -r requirements.txt
-.\.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-
-cd ..\frontend
-npm install
-npm run dev
-```
-
-Open http://127.0.0.1:5173 and use the **Demo** buttons on the Command Center.
+Open http://127.0.0.1:5173. The API docs are at http://127.0.0.1:8000/docs.
 
 ### Configuration
 
-Copy `.env.example` to `.env` (repo root or `backend/`). Real environment variables win over
-`backend/.env`, which wins over the root `.env`.
+Copy `.env.example` to `.env`. Real environment variables win over `backend/.env`, which wins over the root `.env`.
 
-| Variable | Default | Meaning |
+| Variable | Default | What it does |
 |---|---|---|
-| `GNANI_API_KEY` | *(empty)* | Enables Prisma STT and Timbre TTS. Never logged or returned by the API. |
-| `GNANI_BASE_URL` | `https://api.vachana.ai` | Gnani API base URL |
-| `STT_PROVIDER` | `auto` | `auto` (Prisma if key, else mock) · `prisma` · `mock` |
-| `TTS_PROVIDER` | `auto` | `auto` (Timbre if key) · `none` |
-| `EXTRACTION_PROVIDER` | `rules` | `rules` (keyword-based, offline) · `evon` (Evon v3.3 on your own OpenAI-compatible deployment, see `EVON_BASE_URL`) |
-| `PRISMA_DEFAULT_LANGUAGE` | `hi-IN` | Used when no language hint is given |
-| `PRISMA_TIMEOUT_S` / `PRISMA_MAX_RETRIES` | `30` / `2` | Retries only on 429/5xx/network errors |
-| `EVON_BASE_URL` | `https://api.vachana.ai/v1` | Evon LLM endpoint (OpenAI-compatible) |
-| `EVON_MODEL` | `evon-v3.3` | Evon model name |
-| `EVON_TIMEOUT_S` / `EVON_MAX_RETRIES` | `60` / `2` | Timeout and retries for Evon calls |
-| `PRISMA_MODEL`, `PRISMA_FORMAT` | `prisma-v3.0`, `verbatim` | Speech-to-text model and output style. v3.0 sends village-name hints |
-| `TIMBRE_MODEL`, `TIMBRE_VOICE_*` | `timbre-v3.0`, `Shivani` | Voice per language (all v3.0 voices are multilingual). Model and voices must match: v2.5 voice names only work on `timbre-v2.5` |
-| `AAPDA_VAR_DIR` | `backend/var` | SQLite DB, uploads, generated audio |
-| `DATABASE_URL` | `sqlite:///<var>/aapda.db` | |
-| `CORS_ORIGINS` | dashboard (`:5173`), caller app (`:5174`), caller APK (`http://localhost`) | Explicit list, no wildcard |
-| `MAX_UPLOAD_MB` | `10` | Upload size limit |
+| `GNANI_API_KEY` | empty | Turns on Prisma and Timbre. Never logged or returned by the API. |
+| `STT_PROVIDER`, `TTS_PROVIDER` | `auto` | `auto` uses Gnani when a key is set, otherwise the mock |
+| `EXTRACTION_PROVIDER` | `rules` | `rules` (offline) or `evon` (your own OpenAI-compatible Evon endpoint) |
+| `PRISMA_MODEL`, `TIMBRE_MODEL` | `prisma-v3.0`, `timbre-v3.0` | Speech models. Timbre voices must match the model version. |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | `admin`, empty | Dashboard login. With no password, nobody can log in. |
+| `LIVE_PUBLIC` | `false` | Let the public caller app start live calls without a login |
+| `COOKIE_SECURE` | `false` | Set to `true` once the dashboard is served over HTTPS |
+| `CORS_ORIGINS` | local dev origins | An explicit list, no wildcard |
+| `TELEGRAM_BOT_TOKEN` | empty | Starts the Telegram bot. Never commit it. |
+| `AAPDA_VAR_DIR` | `backend/var` | SQLite database, uploads and generated audio |
 
-Runtime thresholds (confidence gate, dedup, priority labels, provider mode) are edited on the
-**Settings** page and stored in the database.
+Confidence-gate, de-duplication and priority thresholds live on the dashboard's **Settings** page and are stored in
+the database. Everything else is explained in `.env.example`.
+
+## Features in detail
 
 ### Awaaz Live
 
-Open **Awaaz Live** in the dashboard, pick a language and press **Start call**. Prisma streams what you say,
-the assistant asks by voice for whatever is still missing (the place, what happened, how many people), reads
-the facts back, and saves a normal report. The Situation Room shows calls as they happen.
-
-A call needs a login, a microphone, and localhost or HTTPS. It's half duplex: the microphone is ignored while
-the assistant speaks, so you can't talk over it. Calls stop after 5 minutes, and they spend Gnani credits.
-
-`LIVE_TIMBRE_MODEL` and `LIVE_TIMBRE_VOICE` choose the voice (default `timbre-v3.0`, `Shivani`), separately from
-`TIMBRE_MODEL`, because the assistant's audio tags only work on v3.0.
-
-### Voice alerts
-
-On an incident page, **Voice alert** plays a fixed safety message in each language, then sends it by text and
-voice note to the people who reported that incident on Telegram, each in their own language. A dispatcher always
-presses send. The wording is written in advance, because Gnani has no translation API and a machine-translated
-safety instruction could be wrong. **Have native speakers check this wording before relying on it.**
-
-### Measuring Prisma
-
-`python scripts/benchmark_stt.py --conditions clean phone phone+noise10 phone+noise0 --variants v2.5 v3-hints`
-(from `backend/`) scores Prisma on synthetic speech, including phone-quality and noisy audio. See
-[docs/STT_BENCHMARK.md](docs/STT_BENCHMARK.md).
-
-### Dashboard login
-
-The landing page is at `/`, and the dashboard needs a login. Set a password in `.env`, then restart the backend:
-
-```
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=choose-a-long-password
-```
-
-With no password nobody can log in. Everything under `/api` needs a login except what the public caller app
-uses to send a report and hear the reply, and Telegram reports always need one. The MCP server signs in with
-`API_TOKEN` in `.env`, matched by `AAPDA_API_TOKEN` in its own config. Sessions last 12 hours. Set
-`COOKIE_SECURE=true` once the dashboard is served over HTTPS.
+Open **Awaaz Live**, pick a language and press **Start call**. Prisma streams what you say, the assistant asks aloud
+for whatever is still missing, reads the facts back, and saves a normal report. The Situation Room shows calls as
+they happen. A call needs a microphone and either localhost or HTTPS. It is half duplex (the mic is ignored while
+the assistant speaks) and stops after 5 minutes.
 
 ### Telegram bot
 
-People can report by voice note, text or GPS in Telegram, with no public URL needed.
+People report by voice note, text or GPS. The bot asks for each missing field one at a time, by text and by voice,
+and repeats unanswered questions every `TELEGRAM_FOLLOWUP_INTERVAL_S` seconds, up to
+`TELEGRAM_FOLLOWUP_MAX_ATTEMPTS` times. Create a bot with @BotFather, put the token in `.env`, restart, and send
+`/start`. Anyone who finds the bot can use it unless you set `TELEGRAM_ALLOWED_CHAT_IDS`. Run only one copy per token.
 
-1. In Telegram, message **@BotFather**, send `/newbot` and copy the token.
-2. Add `TELEGRAM_BOT_TOKEN=<token>` to `.env` and restart the backend. Never commit the token.
-3. Open your bot in Telegram and send `/start`.
+### Voice alerts
 
-The bot records what the caller says, then asks for each missing required field (location, what happened,
-how many people), one at a time, by text and voice note. Unanswered questions repeat every
-`TELEGRAM_FOLLOWUP_INTERVAL_S` seconds (default 120), up to `TELEGRAM_FOLLOWUP_MAX_ATTEMPTS` attempts (default 3).
-Telegram bots cannot place phone or voice calls, so these messages are the automated follow-up.
+On an incident page a dispatcher picks a fixed safety message. It goes out as text and a voice note to the people who
+reported that incident on Telegram, each in their own language. A person always presses send.
 
-The **Share location** button stores the caller's real GPS, labelled separately from simulated village points.
-Anyone who finds the bot can use it unless you set `TELEGRAM_ALLOWED_CHAT_IDS`. Run only one copy per token.
+### MCP server
 
-### 3D location view
+`mcp_server/` exposes five tools (`submit_report`, `get_report`, `list_incidents`, `get_incident`,
+`get_system_health`) over the Model Context Protocol. Run `mcp_server/setup.sh` to generate a Claude Desktop config.
+It signs in with `API_TOKEN` from `.env`.
 
-Command Center → **3D Site**, and each incident page, fly into a tilted view of the incident. It works with no key,
-using free satellite imagery and terrain. For Google's photorealistic 3D tiles, add
-`VITE_GOOGLE_MAPS_API_KEY=<key>` to `frontend/.env.local`, enable the **Map Tiles API** and the
-**Maps JavaScript API**, and restrict the key by HTTP referrer, since it reaches the browser. Google requires billing
-to be enabled on the project.
+### 3D site view and Evaluation Lab
 
-### Database
+**3D Site** flies into a tilted satellite view of an incident and needs no key (add `VITE_GOOGLE_MAPS_API_KEY` for
+Google's photorealistic tiles). The **Evaluation Lab** replays the pipeline on a development split and a hold-out
+split and shows confusion matrices, precision and recall.
 
-SQLite at `backend/var/aapda.db`; tables are created on startup and data survives restarts.
+## How well does it work?
 
-```powershell
-cd backend
-.\.venv\Scripts\python scripts\manage.py init-db          # create tables
-.\.venv\Scripts\python scripts\manage.py seed             # load synthetic reports not yet loaded
-.\.venv\Scripts\python scripts\manage.py reset --reseed   # wipe reports/incidents/audit, reload demo
-.\.venv\Scripts\python scripts\manage.py evaluate         # print evaluation metrics
-```
+On the small **hold-out set of 12 synthetic reports**, which were written after the rules were frozen:
 
-Stop the API before running `reset` from the command line (or use the Reset button in the UI).
-
-### Tests and build
-
-```powershell
-cd backend;  .\.venv\Scripts\python -m pytest -q          # 76 tests
-cd frontend; npm test; npm run build                       # 5 tests + typecheck + production build
-```
-
-### CI/CD
-
-`.github/workflows/ci-cd.yml` runs on every push and pull request:
-
-| Job | What it checks |
+| Metric | Result |
 |---|---|
-| Backend | `pip install`, byte-compile, `pytest tests` (`test_live_api.py` is excluded — it calls the paid Gnani API) |
-| Frontend | `npm ci`, `tsc`, `vitest`, production build |
-| Caller app | `npm ci`, `oxlint`, web build |
+| Location accuracy | 100% |
+| Priority accuracy | 92% (11 of 12) |
+| Medical-emergency recall | 100% (1 of 1) |
+| People-count accuracy | 92% |
+| Duplicate pairs, precision and recall | 100% and 100% (1 pair) |
 
-A push to `main` that passes all three then deploys automatically (a manual
-`workflow_dispatch` on `main` does the same). The deploy job tars `backend/`,
-copies it to the VM and runs `.github/scripts/remote_deploy.sh` there, which:
+These samples are tiny and synthetic, so read them as a sanity check and not a benchmark. The misses are published
+in [docs/EVALUATION.md](docs/EVALUATION.md) instead of being tuned away. Speech-to-text results on clean,
+phone-quality and noisy audio are in [docs/STT_BENCHMARK.md](docs/STT_BENCHMARK.md).
 
-1. backs up the live code and snapshots the SQLite database to
-   `~/aapda/.deploy/backups/` (last 5 of each kept),
-2. rsyncs the new tree, leaving `venv/`, `var/` (database, uploads) and `.env` untouched,
-3. installs dependencies only if `requirements.txt` changed,
-4. restarts the `aapda-api` systemd unit and polls `/api/health`,
-5. restores the backup and restarts if anything fails, then exits non-zero.
+## Safety and limitations
 
-The live commit is recorded in `~/aapda/.deploy/DEPLOYED_SHA` and every run is
-appended to `~/aapda/.deploy/deploy.log`.
+Human oversight is part of the design. Possible duplicates are never merged automatically, every correction keeps the
+original transcript and extraction plus an audit trail, and alerts never promise help. Please read
+[docs/SAFETY.md](docs/SAFETY.md) and [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) before relying on
+anything here.
 
-Repository secrets required (Settings → Secrets and variables → Actions):
-`VM_HOST`, `VM_USER`, `VM_SSH_KEY` (private key, public half in
-`~/.ssh/authorized_keys` on the VM) and optionally `VM_PORT` (default 22).
-
----
-
-## Architecture (short)
+## Deployment
 
 ```
-frontend/ (React + TS + Vite + Tailwind + Leaflet + Recharts)
-   │  polls /api every 2–4 s (no fake live connection)
-backend/app/
-   api/        FastAPI routes (thin) + serializers
-   services/   extraction · gate · priority · matching · aggregation   ← pure, deterministic
-               pipeline · worker · review · demo · evaluation · stats  ← DB orchestration
-   providers/  prisma (STT) · timbre (TTS) · evon (optional, self-hosted) · mock_stt · registry
-   models.py   SQLAlchemy (reports, incidents, links, suggestions, jobs, reviews, audit, ground truth…)
-backend/data/  simulated gazetteer · 40 synthetic reports · 12 hold-out reports · 4 synthetic WAVs
+git push to main
+      |
+GitHub Actions: backend tests, frontend typecheck and tests, caller-app lint and build
+      |  (all green)
+Azure VM: back up code and database, sync, restart the API, check /api/health, roll back on failure
+      |
+Caddy: HTTPS, serves the dashboard, proxies /api (WebSockets included)
+      |
+https://aapdaawaaz.duckdns.org
 ```
 
-Full details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · API: [docs/API.md](docs/API.md) ·
-Safety: [docs/SAFETY.md](docs/SAFETY.md) · Evaluation: [docs/EVALUATION.md](docs/EVALUATION.md).
+- **CI/CD** is in `.github/workflows/ci-cd.yml`. It runs on every push and pull request, and a green push to `main`
+  deploys.
+- **The deploy** snapshots the SQLite database and backs up the live code, syncs the new code (leaving `venv/`,
+  `var/` and `.env` alone), restarts the `aapda-api` service and checks `/api/health`. If anything fails it restores
+  the backup automatically.
+- **One origin.** [Caddy](deploy/Caddyfile) serves the dashboard and proxies `/api` to the API with automatic HTTPS,
+  so the browser never makes a cross-origin request. One-time VM setup: `bash deploy/setup-caddy.sh <your-domain>`.
+- **Secrets** live in GitHub Actions: `VM_HOST`, `VM_USER`, `VM_SSH_KEY`, and optionally `VM_PORT`.
+- `docker-compose.yml` and `backend/Dockerfile` are there if you would rather run the API in a container.
 
----
+## Tests
+
+```bash
+cd backend && venv/bin/python -m pytest -q     # 257 tests
+cd frontend && npm test && npm run build       # 5 tests, typecheck and production build
+```
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| UI shows "API offline" / "Backend unreachable" | Start the backend on port 8000; the Vite dev server proxies `/api` to it (`VITE_API_TARGET` overrides). |
-| `npm` errors about syntax / very old npm | Your system Node is too old. Put Node 18+ on `PATH` or in `.tools\node\`. |
-| Map is grey with a yellow banner | OpenStreetMap tiles could not load (offline). Markers still render at their simulated positions. |
-| Uploaded audio ends in "needs transcript" | Expected without `GNANI_API_KEY`: the mock STT only knows the 4 bundled fixture WAVs. Type the transcript on the report page. |
-| Upload rejected "accepts at most 30 s" | Prisma's documented per-request limit; trim the clip. |
-| Reset from CLI fails with "database is locked" | Stop the API server first, or use the UI Reset button. |
-| Want a clean demo | Command Center → **Reset** (click twice to confirm) → **1 · Incoming call** → **2 · Load all synthetic reports**. |
+| "Backend unreachable" in the dashboard | Start the API on port 8000. The Vite dev server proxies `/api` to it (`VITE_API_TARGET` overrides). |
+| Uploaded audio ends in "needs transcript" | Expected without `GNANI_API_KEY`: the mock only knows the bundled sample clips. Type the transcript on the report page. |
+| "Accepts at most 30 s" | That is Prisma's per-request limit. Trim the clip. |
+| The map is grey with a yellow banner | OpenStreetMap tiles could not load (offline). Markers still show. |
+| `database is locked` on a CLI reset | Stop the API first, or use the Reset button in the UI. |
 
----
+## Team and license
 
-## Repository layout
+Built by **Sarang Gajanan Rao** and **Jainam Dudhediya** at Pune Institute of Computer Technology, for the Great
+Indian AI Internship Challenge by Gnani AI.
 
-```
-.env.example  .gitignore  setup.ps1  run-backend.ps1  run-frontend.ps1  README.md  PITCH.md
-backend/  app/ (api, providers, services, config.py, db.py, models.py, schemas.py, main.py)
-          data/ (simulated_gazetteer.json, synthetic_reports.json, holdout_reports.json, audio/*.wav)
-          scripts/ (manage.py, make_audio_fixtures.ps1)  tests/  requirements.txt
-frontend/ src/ (pages, components, lib)  package.json  vite.config.ts  tailwind.config.js
-docs/     ARCHITECTURE.md API.md SAFETY.md EVALUATION.md KNOWN_LIMITATIONS.md
-```
-Aapda Aawaz
+Licensed under the [Apache License 2.0](LICENSE).
